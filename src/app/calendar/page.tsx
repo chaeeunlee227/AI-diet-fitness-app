@@ -1,5 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useAuth } from '@/lib/auth-context'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval,
@@ -7,12 +9,13 @@ import {
 } from 'date-fns'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
-const USER_ID = 'personal-user'
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 type DaySummary = { date: string; calories: number; logged: boolean; workouts: number }
 
 export default function CalendarPage() {
+  const { user, loading: authLoading } = useAuth()
+  const router = useRouter()
   const [current, setCurrent] = useState(new Date())
   const [summaries, setSummaries] = useState<Map<string, DaySummary>>(new Map())
   const [selected, setSelected] = useState<string | null>(null)
@@ -20,7 +23,8 @@ export default function CalendarPage() {
   const [weightData, setWeightData] = useState<{ date: string; weight: number }[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { loadMonthData() }, [current])
+  useEffect(() => { if (!authLoading && !user) router.push('/login') }, [user, authLoading])
+  useEffect(() => { if (user) loadMonthData() }, [current, user])
 
   async function loadMonthData() {
     setLoading(true)
@@ -28,9 +32,9 @@ export default function CalendarPage() {
     const end = format(endOfMonth(current), 'yyyy-MM-dd')
 
     const [{ data: foodData }, { data: workoutData }, { data: weightData }] = await Promise.all([
-      supabase.from('food_logs').select('log_date, calories').eq('user_id', USER_ID).gte('log_date', start).lte('log_date', end),
-      supabase.from('workout_logs').select('log_date').eq('user_id', USER_ID).gte('log_date', start).lte('log_date', end),
-      supabase.from('weight_logs').select('log_date, weight_kg').eq('user_id', USER_ID).gte('log_date', start).lte('log_date', end).order('log_date'),
+      supabase.from('food_logs').select('log_date, calories').eq('user_id', user!.id).gte('log_date', start).lte('log_date', end),
+      supabase.from('workout_logs').select('log_date').eq('user_id', user!.id).gte('log_date', start).lte('log_date', end),
+      supabase.from('weight_logs').select('log_date, weight_kg').eq('user_id', user!.id).gte('log_date', start).lte('log_date', end).order('log_date'),
     ])
 
     const map = new Map<string, DaySummary>()
@@ -49,8 +53,8 @@ export default function CalendarPage() {
 
   async function loadDayDetail(date: string) {
     const [{ data: food }, { data: workouts }] = await Promise.all([
-      supabase.from('food_logs').select('*').eq('user_id', USER_ID).eq('log_date', date),
-      supabase.from('workout_logs').select('*').eq('user_id', USER_ID).eq('log_date', date),
+      supabase.from('food_logs').select('*').eq('user_id', user!.id).eq('log_date', date),
+      supabase.from('workout_logs').select('*').eq('user_id', user!.id).eq('log_date', date),
     ])
     setSelectedDetail({ food: food || [], workouts: workouts || [] })
   }

@@ -1,6 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/lib/auth-context'
+import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 
 type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack'
@@ -19,9 +21,9 @@ const MEAL_CONFIG: { key: MealType; icon: string; label: string; color: string }
   { key: 'snack', icon: '🍎', label: 'Snack', color: 'border-pink-200 bg-pink-50' },
 ]
 
-const USER_ID = 'personal-user'
-
 export default function LogPage() {
+  const { user, loading: authLoading } = useAuth()
+  const router = useRouter()
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>([])
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([])
@@ -33,12 +35,13 @@ export default function LogPage() {
   const [showWorkoutForm, setShowWorkoutForm] = useState(false)
   const [workout, setWorkout] = useState({ type: '', duration: '', calories: '', notes: '' })
 
-  useEffect(() => { loadLogs() }, [date])
+  useEffect(() => { if (!authLoading && !user) router.push('/login') }, [user, authLoading])
+  useEffect(() => { if (user) loadLogs() }, [date, user])
 
   async function loadLogs() {
     const [{ data: food }, { data: workouts }] = await Promise.all([
-      supabase.from('food_logs').select('*').eq('user_id', USER_ID).eq('log_date', date).order('created_at'),
-      supabase.from('workout_logs').select('*').eq('user_id', USER_ID).eq('log_date', date).order('created_at'),
+      supabase.from('food_logs').select('*').eq('user_id', user!.id).eq('log_date', date).order('created_at'),
+      supabase.from('workout_logs').select('*').eq('user_id', user!.id).eq('log_date', date).order('created_at'),
     ])
     setFoodLogs(food || [])
     setWorkoutLogs(workouts || [])
@@ -64,7 +67,7 @@ export default function LogPage() {
     if (!aiResult || !addingMeal) return
     setSaving(true)
     await supabase.from('food_logs').insert({
-      user_id: USER_ID,
+      user_id: user!.id,
       log_date: date,
       meal_type: addingMeal,
       food_name: aiResult.food_name,
@@ -90,7 +93,7 @@ export default function LogPage() {
     if (!workout.type || !workout.duration) return
     setSaving(true)
     await supabase.from('workout_logs').insert({
-      user_id: USER_ID,
+      user_id: user!.id,
       log_date: date,
       workout_type: workout.type,
       duration_minutes: parseInt(workout.duration),

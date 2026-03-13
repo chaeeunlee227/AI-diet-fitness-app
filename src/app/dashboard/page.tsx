@@ -1,6 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/lib/auth-context'
+import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 
 type Plan = {
@@ -23,6 +25,8 @@ const MEAL_COLORS: Record<string, string> = {
 }
 
 export default function DashboardPage() {
+  const { user, loading: authLoading } = useAuth()
+  const router = useRouter()
   const [plan, setPlan] = useState<Plan | null>(null)
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>([])
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([])
@@ -31,14 +35,12 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<{ daily_calorie_target: number; daily_protein_target: number; goal: string } | null>(null)
   const today = format(new Date(), 'yyyy-MM-dd')
 
-  useEffect(() => {
-    loadData()
-  }, [])
+  useEffect(() => { if (!authLoading && !user) router.push('/login') }, [user, authLoading])
+  useEffect(() => { if (user) loadData() }, [user])
 
   async function loadData() {
     setLoading(true)
-    // For personal use — use a fixed user_id or get from auth
-    const userId = 'personal-user'
+    const userId = user!.id
 
     const [{ data: profileData }, { data: foodData }, { data: workoutData }] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', userId).single(),

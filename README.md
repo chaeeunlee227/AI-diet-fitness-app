@@ -1,15 +1,16 @@
 # HealthTrack — AI Diet & Fitness Web App
 
-A personal web app to track daily diet and workouts with AI-powered calorie analysis and suggestions.
+Track daily meals and workouts with AI-powered calorie analysis, personalized plans, and coaching feedback.
 
 ## Tech Stack
 - **Frontend**: Next.js 14 + TypeScript + Tailwind CSS
-- **Database**: Supabase (PostgreSQL)
+- **Auth & Database**: Supabase (email auth + PostgreSQL + RLS)
 - **AI**: Swappable — Claude Haiku (default), Gemini 1.5 Flash (free), or GPT-4o mini
+- **Deploy**: Vercel (free hobby plan)
 
 ---
 
-## Setup in 5 steps
+## Setup — 5 steps
 
 ### 1. Install dependencies
 ```bash
@@ -17,63 +18,85 @@ npm install
 ```
 
 ### 2. Set up Supabase
-1. Go to [supabase.com](https://supabase.com) and open your project (or create one)
-2. Open **SQL Editor** and paste the contents of `supabase-schema.sql`
-3. Click **Run** — this creates all 4 tables and inserts your default profile
-4. Edit the `INSERT INTO profiles` values to match your height, weight, age, and goal
+
+1. Open your Supabase project (or create one at supabase.com)
+2. Go to **SQL Editor** and run the full contents of `supabase-schema.sql`
+   - This creates all 4 tables with proper auth linkage and Row Level Security
+   - No personal data is in this file — safe to commit to GitHub
+3. Go to **Authentication → Providers → Email** and confirm it's enabled
+   - Optional: disable "Confirm email" under Auth settings for easier local dev
 
 ### 3. Configure environment variables
 ```bash
 cp .env.local.example .env.local
 ```
-Edit `.env.local`:
-- Add your **Supabase URL** and **anon key** (from Supabase > Settings > API)
-- Add your AI API key (choose one):
-  - `ANTHROPIC_API_KEY` + `AI_PROVIDER=anthropic` ← recommended while learning
-  - `GEMINI_API_KEY` + `AI_PROVIDER=gemini` ← free tier, great for personal use
-  - `OPENAI_API_KEY` + `AI_PROVIDER=openai`
+Fill in `.env.local` — see the comments inside for exactly where to find each value in Supabase.
 
-### 4. Run the app
+### 4. Run locally
 ```bash
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000)
+Open http://localhost:3000 — you'll be redirected to `/login` to create an account.
 
-### 5. Deploy (optional)
+### 5. Deploy to Vercel
 ```bash
-# Deploy to Vercel (free)
-npx vercel
+# Push to GitHub first (your .gitignore protects .env.local automatically)
+git init && git add . && git commit -m "init"
+git remote add origin https://github.com/you/health-tracker.git
+git push -u origin main
+
+# Then connect repo at vercel.com → New Project → import from GitHub
+# Add your env vars in Vercel's project settings → Environment Variables
 ```
+
+After deploying, add your Vercel URL to Supabase:
+- **Authentication → URL Configuration → Site URL** → set to your Vercel URL
+- **Authentication → URL Configuration → Redirect URLs** → add `https://your-app.vercel.app/**`
 
 ---
 
-## Features
+## How it works
 
-| Feature | Description |
+### Auth flow
+- `/login` — sign up or sign in with email + password
+- On signup, Supabase automatically creates an empty profile row via a database trigger
+- `/profile` — fill in your details; smart edit page (never re-onboards existing users)
+- All data is tied to your auth user ID, enforced by Row Level Security at the database level
+
+### Pages
+| Page | Description |
 |---|---|
-| **Dashboard** | Daily overview — calorie ring, macros, AI-suggested meal plan & workout |
-| **Daily Log** | Add food by typing naturally → AI analyzes calories & macros instantly |
-| **Workout Log** | Log workouts with duration, type, calories burned |
-| **Calendar** | Monthly view with logged days highlighted, click any day for details |
-| **Weight trend** | Chart of weight over time (log weights in the `weight_logs` table) |
-| **AI feedback** | Personalized daily coaching message based on your logs |
+| `/dashboard` | Calorie ring, macros, AI daily plan + feedback |
+| `/log` | Add food by typing naturally → AI analyzes calories & macros |
+| `/calendar` | Monthly view, click any day for details, weight trend chart |
+| `/profile` | Edit your goal, stats, diet & workout preferences |
 
-## Switching AI Provider
-
-In `.env.local`, change `AI_PROVIDER` to one of:
-- `anthropic` — Claude Haiku 4.5 (~$0.01/day personal use)
+### Switching AI provider
+In `.env.local`, set `AI_PROVIDER` to one of:
+- `anthropic` — Claude Haiku 4.5 (best quality, ~$0.01/day personal use)
 - `gemini` — Gemini 1.5 Flash (free up to generous daily limits)
-- `openai` — GPT-4o mini (~$0.02/day personal use)
+- `openai` — GPT-4o mini (~$0.02/day)
 
-## Project Structure
+### Multi-user
+The app is fully multi-user — each account sees only its own data, enforced by Supabase Row Level Security. Share the deployed URL and anyone can create their own account.
+
+---
+
+## Project structure
 ```
 src/
   app/
-    api/ai/       ← AI route (food analysis, plan generation, feedback)
-    dashboard/    ← Home overview page
+    api/ai/       ← AI route: food analysis, plan generation, feedback
+    dashboard/    ← Home with calorie ring and AI plan
     log/          ← Daily food + workout logging
-    calendar/     ← Monthly calendar view
+    calendar/     ← Monthly calendar + weight chart
+    login/        ← Email auth (sign in / sign up)
+    profile/      ← Edit profile (smart: loads existing data)
+    nav.tsx       ← Auth-aware navigation bar
   lib/
-    supabase.ts   ← Supabase client + types
-    ai.ts         ← AI provider abstraction
+    supabase.ts       ← Supabase client + DB types
+    ai.ts             ← AI provider abstraction (Claude/Gemini/OpenAI)
+    auth-context.tsx  ← React auth context (useAuth hook)
+supabase-schema.sql   ← Run once in Supabase SQL editor — no personal data
+.env.local.example    ← Copy to .env.local and fill in your keys
 ```
