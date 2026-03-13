@@ -1,8 +1,9 @@
-import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
 export function createSupabaseServerClient() {
-  const cookieStore = cookies()
+  // TS thinks cookies() is Promise<ReadonlyRequestCookies>, so we coerce it
+  const cookieStore = cookies() as any
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,12 +11,17 @@ export function createSupabaseServerClient() {
     {
       cookies: {
         getAll() {
-          return cookieStore.getAll().map(({ name, value }) => ({ name, value }))
+          return cookieStore.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set({ name, value, ...options })
-          })
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options)
+            })
+          } catch {
+            // Called from a Server Component; safe to ignore if you refresh
+            // sessions in middleware.
+          }
         },
       },
     }

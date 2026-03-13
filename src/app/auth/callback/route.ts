@@ -5,7 +5,7 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
 
-  const supabase = createSupabaseServerClient()
+  const supabase = createSupabaseServerClient()  // 👈 no await
 
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
@@ -15,6 +15,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Now the session is stored in cookies, so /auth/check can see the user
   return NextResponse.redirect(`${origin}/auth/check`)
 }
