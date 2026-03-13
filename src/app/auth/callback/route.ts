@@ -1,18 +1,20 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
 
+  const supabase = createSupabaseServerClient()
+
   if (code) {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-    await supabase.auth.exchangeCodeForSession(code)
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    if (error) {
+      console.error('Error exchanging code:', error.message)
+      return NextResponse.redirect(`${origin}/login?error=magic-link`)
+    }
   }
 
-  // Check if user has a profile — if not, send to onboarding
+  // Now the session is stored in cookies, so /auth/check can see the user
   return NextResponse.redirect(`${origin}/auth/check`)
 }
