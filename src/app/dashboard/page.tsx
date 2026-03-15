@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useRouter } from 'next/navigation'
-import { format } from 'date-fns'
+import { format, subDays } from 'date-fns'
 
 type Plan = {
   daily_calories: number
@@ -33,6 +33,7 @@ export default function DashboardPage() {
   const [feedback, setFeedback] = useState('')
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<{ daily_calorie_target: number; daily_protein_target: number; goal: string } | null>(null)
+  const [streak, setStreak] = useState(0)
   const today = format(new Date(), 'yyyy-MM-dd')
 
   useEffect(() => { if (!authLoading && !user) router.push('/login') }, [user, authLoading])
@@ -80,7 +81,43 @@ export default function DashboardPage() {
         if (fbData?.feedback) setFeedback(fbData.feedback)
       }
     }
+
+    // Calculate real streak: count consecutive past days with at least one food log
+    await calculateStreak(userId)
+
     setLoading(false)
+  }
+
+  async function calculateStreak(userId: string) {
+    // Fetch distinct log dates for this user, most recent first
+    const { data } = await supabase
+      .from('food_logs')
+      .select('log_date')
+      .eq('user_id', userId)
+      .order('log_date', { ascending: false })
+
+    if (!data || data.length === 0) {
+      setStreak(0)
+      return
+    }
+
+    // Get unique dates as a Set for O(1) lookup
+    const loggedDates = new Set(data.map(r => r.log_date))
+
+    // Walk backwards from today, counting consecutive days that have a log
+    let count = 0
+    let cursor = new Date()
+    while (true) {
+      const dateStr = format(cursor, 'yyyy-MM-dd')
+      if (loggedDates.has(dateStr)) {
+        count++
+        cursor = subDays(cursor, 1)
+      } else {
+        break
+      }
+    }
+
+    setStreak(count)
   }
 
   const totalCals = foodLogs.reduce((s, l) => s + l.calories, 0)
@@ -105,13 +142,16 @@ export default function DashboardPage() {
           </h1>
           <p className="text-gray-500 text-sm mt-1">{format(new Date(), 'EEEE, MMMM d')}</p>
         </div>
-        <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2">
-          <span className="text-xl">🔥</span>
-          <div>
-            <div className="text-lg font-semibold text-amber-700">12</div>
-            <div className="text-xs text-amber-600">day streak</div>
+        {/* Only show streak badge if streak > 0 */}
+        {streak > 0 && (
+          <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2">
+            <span className="text-xl">🔥</span>
+            <div>
+              <div className="text-lg font-semibold text-amber-700">{streak}</div>
+              <div className="text-xs text-amber-600">day streak</div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* AI Feedback */}
@@ -194,38 +234,39 @@ export default function DashboardPage() {
         </div>
       ) : plan ? (
         <div className="card">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-base">✦</span>
-            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">AI suggested plan for today</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Today's plan</h2>
+            {plan.tip && <p className="text-xs text-gray-400 italic max-w-xs text-right">{plan.tip}</p>}
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map(meal => (
-              <div key={meal} className={`rounded-xl border p-3 ${MEAL_COLORS[meal]}`}>
-                <div className="text-lg mb-1">{MEAL_ICONS[meal]}</div>
-                <div className="text-xs font-semibold text-gray-700 capitalize">{meal}</div>
-                <div className="text-sm font-medium text-gray-900 mt-1 leading-tight">{plan.meals[meal]?.name}</div>
-                <div className="text-xs text-gray-500 mt-1">{plan.meals[meal]?.calories} kcal</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Object.entries(plan.meals).map(([key, meal]) => (
+              <div key={key} className={`rounded-xl border p-3 ${MEAL_COLORS[key] || 'bg-gray-50 border-gray-200'}`}>
+                <div className="text-lg mb-1">{MEAL_ICONS[key] || '🍽️'}</div>
+                <div className="text-xs font-semibold text-gray-700 capitalize">{key}</div>
+                <div className="text-xs text-gray-600 mt-0.5 font-medium">{meal.name}</div>
+                <div className="text-xs text-gray-400 mt-0.5">{meal.calories} kcal</div>
+                {meal.description && <div className="text-xs text-gray-400 mt-1 leading-relaxed">{meal.description}</div>}
               </div>
             ))}
           </div>
           {plan.workout && (
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-start gap-3 mb-3">
+            <div className="mt-3 pt-3 border-t border-gray-100 flex items-start gap-3">
               <span className="text-xl">🏋️</span>
               <div>
-                <div className="text-sm font-semibold text-blue-800">{plan.workout.name} · {plan.workout.duration_minutes} min</div>
-                <div className="text-xs text-blue-600 mt-0.5">{plan.workout.description}</div>
+                <div className="text-xs font-semibold text-gray-700">{plan.workout.name}</div>
+                <div className="text-xs text-gray-500">{plan.workout.duration_minutes} min · {plan.workout.calories_burned} kcal</div>
+                {plan.workout.description && <div className="text-xs text-gray-400 mt-0.5">{plan.workout.description}</div>}
               </div>
-            </div>
-          )}
-          {plan.tip && (
-            <div className="text-sm text-gray-600 italic border-t border-gray-100 pt-3">
-              💡 {plan.tip}
             </div>
           )}
         </div>
       ) : (
         <div className="card text-center py-8">
-          <p className="text-gray-500 text-sm">No profile found. <a href="/onboard" className="text-sky-600 hover:underline">Set up your profile</a> to get a personalized plan.</p>
+          <div className="text-3xl mb-2">👋</div>
+          <p className="text-sm text-gray-500">
+            {/* FIX: was /onboard — that page doesn't exist. Profile is at /profile */}
+            <a href="/profile" className="text-sky-600 hover:underline">Set up your profile</a> to get a personalized plan.
+          </p>
         </div>
       )}
 
