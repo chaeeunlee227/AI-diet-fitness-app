@@ -3,14 +3,14 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 export async function GET(request: NextRequest) {
   const { origin } = new URL(request.url)
-  const supabase = createSupabaseServerClient()
+  
+  const supabase = await createSupabaseServerClient()
 
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
   if (!user) {
-    // No session found → go back to login
     return NextResponse.redirect(`${origin}/login`)
   }
 
@@ -21,10 +21,8 @@ export async function GET(request: NextRequest) {
     .single()
 
   if (!profile) {
-    // First-time user → onboarding
     return NextResponse.redirect(`${origin}/onboard`)
   }
 
-  // Returning user → dashboard
   return NextResponse.redirect(`${origin}/dashboard`)
 }

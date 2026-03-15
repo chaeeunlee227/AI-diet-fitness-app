@@ -1,9 +1,9 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-export function createSupabaseServerClient() {
-  // TS thinks cookies() is Promise<ReadonlyRequestCookies>, so we coerce it
-  const cookieStore = cookies() as any
+export async function createSupabaseServerClient() {
+  // In Next.js 15, cookies() must be awaited
+  const cookieStore = await cookies()
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,8 +19,8 @@ export function createSupabaseServerClient() {
               cookieStore.set(name, value, options)
             })
           } catch {
-            // Called from a Server Component; safe to ignore if you refresh
-            // sessions in middleware.
+            // Called from a Server Component; safe to ignore if middleware
+            // handles session refresh.
           }
         },
       },
