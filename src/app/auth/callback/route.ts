@@ -2,12 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-/**
- * Handles the PKCE flow: Supabase sends ?code=... as a query param.
- *
- * The token hash flow (#access_token=...) is handled client-side at
- * /auth/confirm/page.tsx because URL fragments never reach the server.
- */
+// Handles PKCE flow: magic link arrives as /auth/callback?code=...
+// Next.js 15 requires cookies() to be awaited.
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
@@ -17,6 +13,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/login?error=missing_code`)
   }
 
+  // MUST await cookies() in Next.js 15 — omitting await silently breaks setAll
   const cookieStore = await cookies()
 
   const supabase = createServerClient(

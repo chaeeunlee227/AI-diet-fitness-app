@@ -3,15 +3,9 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
-/**
- * Handles the magic link token hash flow.
- *
- * Supabase magic links redirect here with session tokens in the URL
- * fragment (e.g. #access_token=...&refresh_token=...).
- * Fragments are never sent to the server, so this client component
- * reads the fragment, lets the Supabase client exchange it for a real
- * session via onAuthStateChange, then redirects to /dashboard.
- */
+// Fallback for token hash flow (#access_token=...) in case Supabase ever
+// sends that instead of the PKCE code. onAuthStateChange picks up the
+// fragment automatically and fires SIGNED_IN.
 export default function AuthConfirmPage() {
   const router = useRouter()
 
@@ -23,7 +17,6 @@ export default function AuthConfirmPage() {
       }
     })
 
-    // Handle case where session was already set before listener fired
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         subscription.unsubscribe()

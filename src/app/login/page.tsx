@@ -17,10 +17,10 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        // /auth/confirm handles the token hash (#access_token=...) client-side.
-        // /auth/callback handles the PKCE code (?code=...) server-side.
-        // Magic links use the token hash flow, so point here.
-        emailRedirectTo: `${window.location.origin}/auth/confirm`,
+        // Supabase @supabase/auth-js >=2.x defaults to PKCE flow:
+        // the magic link lands at /auth/callback?code=... (not a hash fragment).
+        // route.ts at /auth/callback handles the server-side code exchange.
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     })
     if (error) {
@@ -34,7 +34,6 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm">
-        {/* Logo */}
         <div className="text-center mb-8">
           <div className="text-5xl mb-3">🥗</div>
           <h1 className="text-2xl font-semibold text-gray-900">HealthTrack</h1>
