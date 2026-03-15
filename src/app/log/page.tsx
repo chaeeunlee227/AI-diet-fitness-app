@@ -31,6 +31,7 @@ export default function LogPage() {
   const [foodInput, setFoodInput] = useState('')
   const [analyzing, setAnalyzing] = useState(false)
   const [aiResult, setAiResult] = useState<any>(null)
+  const [analyzeError, setAnalyzeError] = useState('')   // ← new: surface errors
   const [saving, setSaving] = useState(false)
   const [showWorkoutForm, setShowWorkoutForm] = useState(false)
   const [workout, setWorkout] = useState({ type: '', duration: '', calories: '', notes: '' })
@@ -51,16 +52,25 @@ export default function LogPage() {
     if (!foodInput.trim()) return
     setAnalyzing(true)
     setAiResult(null)
+    setAnalyzeError('')
     try {
       const res = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'analyze_food', data: { description: foodInput } }),
       })
-      const { data } = await res.json()
-      setAiResult(data)
-    } catch { setAiResult(null) }
-    setAnalyzing(false)
+      const json = await res.json()
+      if (!res.ok || !json.success) {
+        // Show the actual error message from the API route
+        setAnalyzeError(json.error ?? 'Analysis failed. Please try again.')
+      } else {
+        setAiResult(json.data)
+      }
+    } catch (err: any) {
+      setAnalyzeError(err?.message ?? 'Network error. Please check your connection.')
+    } finally {
+      setAnalyzing(false)
+    }
   }
 
   async function saveFood() {
@@ -80,6 +90,7 @@ export default function LogPage() {
     setAddingMeal(null)
     setFoodInput('')
     setAiResult(null)
+    setAnalyzeError('')
     setSaving(false)
     loadLogs()
   }
@@ -159,7 +170,7 @@ export default function LogPage() {
                 {mealCals > 0 && <span className="text-xs text-gray-400">{mealCals} kcal</span>}
               </div>
               <button
-                onClick={() => { setAddingMeal(meal.key); setAiResult(null); setFoodInput('') }}
+                onClick={() => { setAddingMeal(meal.key); setAiResult(null); setAnalyzeError(''); setFoodInput('') }}
                 className="text-xs bg-sky-500 hover:bg-sky-600 text-white px-3 py-1.5 rounded-lg transition-colors"
               >
                 + Add food
@@ -189,7 +200,7 @@ export default function LogPage() {
                 <div className="flex gap-2 mb-3">
                   <input
                     value={foodInput}
-                    onChange={e => setFoodInput(e.target.value)}
+                    onChange={e => { setFoodInput(e.target.value); setAnalyzeError('') }}
                     onKeyDown={e => e.key === 'Enter' && analyzeFood()}
                     placeholder="e.g. 2 scrambled eggs with toast, bowl of oatmeal..."
                     className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sky-300"
@@ -203,6 +214,13 @@ export default function LogPage() {
                     {analyzing ? '⏳ Analyzing...' : '✦ Analyze'}
                   </button>
                 </div>
+
+                {/* Error message - now visible! */}
+                {analyzeError && (
+                  <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">
+                    ⚠ {analyzeError}
+                  </p>
+                )}
 
                 {aiResult && (
                   <div className="bg-white rounded-xl border border-gray-200 p-3 mb-3">
@@ -234,7 +252,7 @@ export default function LogPage() {
                     </div>
                   </div>
                 )}
-                <button onClick={() => { setAddingMeal(null); setAiResult(null) }} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+                <button onClick={() => { setAddingMeal(null); setAiResult(null); setAnalyzeError('') }} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
               </div>
             )}
           </div>
