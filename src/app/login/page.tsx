@@ -17,8 +17,10 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        // After clicking the magic link, redirect here
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        // /auth/confirm handles the token hash (#access_token=...) client-side.
+        // /auth/callback handles the PKCE code (?code=...) server-side.
+        // Magic links use the token hash flow, so point here.
+        emailRedirectTo: `${window.location.origin}/auth/confirm`,
       },
     })
     if (error) {
