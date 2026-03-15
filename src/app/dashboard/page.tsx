@@ -49,10 +49,13 @@ export default function DashboardPage() {
       supabase.from('workout_logs').select('*').eq('user_id', userId).eq('log_date', today),
     ])
 
-    if (profileData) {
+    if (profileData && profileData.height_cm) {
       setProfile(profileData)
-      setFoodLogs(foodData || [])
-      setWorkoutLogs(workoutData || [])
+      // ... AI plan generation
+    } else {
+      // Profile incomplete — send to profile setup
+      router.push('/profile')
+    }
 
       // Generate AI plan
       const res = await fetch('/api/ai', {
