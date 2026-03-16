@@ -50,6 +50,7 @@ export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [plan, setPlan] = useState<Plan | null>(null);
+  const [weekStats, setWeekStats] = useState<{ date: string; calories: number; logged: boolean; workouts: number }[]>([])
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
   const [feedback, setFeedback] = useState("");
