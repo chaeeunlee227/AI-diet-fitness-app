@@ -32,8 +32,8 @@ export default function DashboardPage() {
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([])
   const [feedback, setFeedback] = useState('')
   const [loading, setLoading] = useState(true)
-  const [profile, setProfile] = useState<{ daily_calorie_target: number; daily_protein_target: number; goal: string } | null>(null)
   const [streak, setStreak] = useState(0)
+  const [profile, setProfile] = useState<{ daily_calorie_target: number; daily_protein_target: number; goal: string } | null>(null)
   const today = format(new Date(), 'yyyy-MM-dd')
 
   useEffect(() => { if (!authLoading && !user) router.push('/login') }, [user, authLoading])
@@ -51,11 +51,11 @@ export default function DashboardPage() {
 
     if (profileData && profileData.height_cm) {
       setProfile(profileData)
-      // ... AI plan generation
-    } else {
-      // Profile incomplete — send to profile setup
-      router.push('/profile')
-    }
+      setFoodLogs(foodData || [])
+      setWorkoutLogs(workoutData || [])
+
+      // Calculate streak
+      await calculateStreak(userId)
 
       // Generate AI plan
       const res = await fetch('/api/ai', {
@@ -83,16 +83,15 @@ export default function DashboardPage() {
         const { data: fbData } = await fbRes.json()
         if (fbData?.feedback) setFeedback(fbData.feedback)
       }
+    } else {
+      // Profile incomplete — send to profile setup
+      router.push('/profile')
     }
-
-    // Calculate real streak: count consecutive past days with at least one food log
-    await calculateStreak(userId)
 
     setLoading(false)
   }
 
   async function calculateStreak(userId: string) {
-    // Fetch distinct log dates for this user, most recent first
     const { data } = await supabase
       .from('food_logs')
       .select('log_date')
@@ -104,10 +103,8 @@ export default function DashboardPage() {
       return
     }
 
-    // Get unique dates as a Set for O(1) lookup
     const loggedDates = new Set(data.map(r => r.log_date))
 
-    // Walk backwards from today, counting consecutive days that have a log
     let count = 0
     let cursor = new Date()
     while (true) {
@@ -145,7 +142,7 @@ export default function DashboardPage() {
           </h1>
           <p className="text-gray-500 text-sm mt-1">{format(new Date(), 'EEEE, MMMM d')}</p>
         </div>
-        {/* Only show streak badge if streak > 0 */}
+        {/* Streak badge — only shown when streak > 0 */}
         {streak > 0 && (
           <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2">
             <span className="text-xl">🔥</span>
@@ -267,7 +264,6 @@ export default function DashboardPage() {
         <div className="card text-center py-8">
           <div className="text-3xl mb-2">👋</div>
           <p className="text-sm text-gray-500">
-            {/* FIX: was /onboard — that page doesn't exist. Profile is at /profile */}
             <a href="/profile" className="text-sky-600 hover:underline">Set up your profile</a> to get a personalized plan.
           </p>
         </div>
