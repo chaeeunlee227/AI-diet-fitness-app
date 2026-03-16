@@ -13,7 +13,6 @@ const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 type DaySummary = { date: string; calories: number; logged: boolean; workouts: number }
 
-// Get today's date as a yyyy-MM-dd string using LOCAL time (avoids UTC offset bugs)
 function getTodayKey() {
   const d = new Date()
   const y = d.getFullYear()
@@ -63,7 +62,6 @@ export default function CalendarPage() {
   }
 
   async function loadDayDetail(date: string) {
-    // Reset to null so loading skeleton shows while fetching
     setSelectedDetail(null)
     const [{ data: food }, { data: workouts }] = await Promise.all([
       supabase.from('food_logs').select('*').eq('user_id', user!.id).eq('log_date', date),
@@ -73,20 +71,17 @@ export default function CalendarPage() {
   }
 
   function handleDayClick(date: string) {
-    // If clicking the already-selected date, keep it selected and don't re-fetch
     if (selected === date) return
     setSelected(date)
     loadDayDetail(date)
   }
 
-  // Calendar grid
   const monthStart = startOfMonth(current)
   const monthEnd = endOfMonth(current)
   const calStart = startOfWeek(monthStart)
   const calEnd = endOfWeek(monthEnd)
   const calDays = eachDayOfInterval({ start: calStart, end: calEnd })
 
-  // Monthly stats
   const allSummaries = Array.from(summaries.values())
   const loggedDays = allSummaries.filter(s => s.logged).length
   const avgCals = loggedDays > 0 ? Math.round(allSummaries.filter(s => s.logged).reduce((s, d) => s + d.calories, 0) / loggedDays) : 0
@@ -94,7 +89,6 @@ export default function CalendarPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-gray-900">Calendar</h1>
         <div className="flex items-center gap-2">
@@ -104,11 +98,10 @@ export default function CalendarPage() {
           <button onClick={() => setCurrent(d => new Date(d.getFullYear(), d.getMonth() + 1))}
             className="w-8 h-8 border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center justify-center text-gray-600">›</button>
           <button onClick={() => setCurrent(new Date())}
-            className="ml-1 text-xs text-sky-600 hover:underline hover:bg-sky-400 hover:text-gray-600 px-2 py-1">Today</button>
+            className="ml-1 text-xs text-sky-600 hover:underline px-2 py-1">Today</button>
         </div>
       </div>
 
-      {/* Monthly stats */}
       <div className="grid grid-cols-3 gap-4">
         <StatCard label="Days logged" value={`${loggedDays}`} icon="📋" />
         <StatCard label="Avg calories/day" value={avgCals > 0 ? `${avgCals}` : '—'} icon="🔥" />
@@ -116,7 +109,6 @@ export default function CalendarPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Calendar */}
         <div className="lg:col-span-2 card">
           <div className="grid grid-cols-7 mb-2">
             {DAYS.map(d => (
@@ -125,7 +117,6 @@ export default function CalendarPage() {
           </div>
           <div className="grid grid-cols-7 gap-1">
             {calDays.map(day => {
-              // Use string key comparison for today — avoids timezone issues with isToday()
               const key = format(day, 'yyyy-MM-dd')
               const s = summaries.get(key)
               const isCurrentMonth = day.getMonth() === current.getMonth()
@@ -138,17 +129,18 @@ export default function CalendarPage() {
                   onClick={() => handleDayClick(key)}
                   className={`
                     aspect-square rounded-lg p-1 flex flex-col items-center justify-center relative transition-all text-xs
-                    ${isCurrentMonth ? 'hover:bg-gray-50' : 'opacity-30'}
+                    ${!isCurrentMonth ? 'opacity-30' : ''}
+                    ${isCurrentMonth && !isT ? 'hover:bg-gray-50' : ''}
+                    ${isCurrentMonth && isT && !isSel ? 'hover:bg-sky-400 hover:text-black' : ''}
                     ${isSel && !isT ? 'ring-2 ring-sky-400 bg-sky-50' : ''}
                     ${isSel && isT ? 'ring-2 ring-sky-600 bg-sky-500 text-white' : ''}
                     ${isT && !isSel ? 'bg-sky-500 text-white' : ''}
                     ${!isT && !isSel ? 'text-gray-700' : ''}
                   `}
                 >
-                  <span className={`font-medium ${isT ? 'text-white' : ''}`}>{format(day, 'd')}</span>
+                  <span className="font-medium">{format(day, 'd')}</span>
                   {s?.logged && (
                     <div className="flex gap-0.5 mt-0.5">
-                      {/* Green dot for diet - always show on non-today days; show white on today */}
                       <span className={`w-1 h-1 rounded-full ${isT ? 'bg-white' : 'bg-green-400'}`} />
                       {s.workouts > 0 && (
                         <span className={`w-1 h-1 rounded-full ${isT ? 'bg-white' : 'bg-blue-400'}`} />
@@ -165,7 +157,6 @@ export default function CalendarPage() {
           </div>
         </div>
 
-        {/* Day detail panel */}
         <div className="card">
           {selected ? (
             <div>
@@ -223,7 +214,6 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* Weight trend chart */}
       {weightData.length > 1 && (
         <div className="card">
           <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Weight Trend</h3>
