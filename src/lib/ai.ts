@@ -20,29 +20,26 @@ async function callAnthropic(system: string, messages: AIMessage[]): Promise<str
 }
 
 async function callGemini(system: string, messages: AIMessage[]): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) throw new Error('GEMINI_API_KEY is not set in environment variables')
-
   const fullPrompt = system + '\n\n' + messages.map(m => `${m.role}: ${m.content}`).join('\n')
-
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contents: [{ parts: [{ text: fullPrompt }] }] }),
     }
   )
-
   const data = await res.json()
 
-  // Surface Gemini API errors clearly instead of swallowing them
-  if (!res.ok || data.error) {
-    throw new Error(`Gemini API error: ${data.error?.message ?? res.statusText}`)
+  // Surface API errors clearly instead of silently returning 'No response'
+  if (!res.ok) {
+    throw new Error(`Gemini API error ${res.status}: ${data.error?.message ?? JSON.stringify(data)}`)
   }
 
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text
-  if (!text) throw new Error('Gemini returned an empty response')
+  if (!text) {
+    throw new Error(`Gemini returned no content. Full response: ${JSON.stringify(data)}`)
+  }
 
   return text
 }
