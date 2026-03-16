@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval,
-  getDay, isSameDay, isToday, isBefore, parseISO, startOfWeek, endOfWeek
+  parseISO, startOfWeek, endOfWeek
 } from 'date-fns'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -13,15 +13,26 @@ const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 type DaySummary = { date: string; calories: number; logged: boolean; workouts: number }
 
+// Get today's date as a yyyy-MM-dd string using LOCAL time (avoids UTC offset bugs)
+function getTodayKey() {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 export default function CalendarPage() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [current, setCurrent] = useState(new Date())
   const [summaries, setSummaries] = useState<Map<string, DaySummary>>(new Map())
   const [selected, setSelected] = useState<string | null>(null)
-  const [selectedDetail, setSelectedDetail] = useState<any>(null)
+  const [selectedDetail, setSelectedDetail] = useState<{ food: any[]; workouts: any[] } | null>(null)
   const [weightData, setWeightData] = useState<{ date: string; weight: number }[]>([])
   const [loading, setLoading] = useState(true)
+
+  const todayKey = getTodayKey()
 
   useEffect(() => { if (!authLoading && !user) router.push('/login') }, [user, authLoading])
   useEffect(() => { if (user) loadMonthData() }, [current, user])
@@ -31,7 +42,7 @@ export default function CalendarPage() {
     const start = format(startOfMonth(current), 'yyyy-MM-dd')
     const end = format(endOfMonth(current), 'yyyy-MM-dd')
 
-    const [{ data: foodData }, { data: workoutData }, { data: weightData }] = await Promise.all([
+    const [{ data: foodData }, { data: workoutData }, { data: wData }] = await Promise.all([
       supabase.from('food_logs').select('log_date, calories').eq('user_id', user!.id).gte('log_date', start).lte('log_date', end),
       supabase.from('workout_logs').select('log_date').eq('user_id', user!.id).gte('log_date', start).lte('log_date', end),
       supabase.from('weight_logs').select('log_date, weight_kg').eq('user_id', user!.id).gte('log_date', start).lte('log_date', end).order('log_date'),
@@ -39,19 +50,21 @@ export default function CalendarPage() {
 
     const map = new Map<string, DaySummary>()
     foodData?.forEach(({ log_date, calories }) => {
-      const existing = map.get(log_date) || { date: log_date, calories: 0, logged: false, workouts: 0 }
+      const existing = map.get(log_date) ?? { date: log_date, calories: 0, logged: false, workouts: 0 }
       map.set(log_date, { ...existing, calories: existing.calories + calories, logged: true })
     })
     workoutData?.forEach(({ log_date }) => {
-      const existing = map.get(log_date) || { date: log_date, calories: 0, logged: false, workouts: 0 }
+      const existing = map.get(log_date) ?? { date: log_date, calories: 0, logged: false, workouts: 0 }
       map.set(log_date, { ...existing, workouts: existing.workouts + 1 })
     })
     setSummaries(map)
-    setWeightData(weightData?.map(w => ({ date: w.log_date, weight: w.weight_kg })) || [])
+    setWeightData(wData?.map(w => ({ date: w.log_date, weight: w.weight_kg })) || [])
     setLoading(false)
   }
 
   async function loadDayDetail(date: string) {
+    // Reset to null so loading skeleton shows while fetching
+    setSelectedDetail(null)
     const [{ data: food }, { data: workouts }] = await Promise.all([
       supabase.from('food_logs').select('*').eq('user_id', user!.id).eq('log_date', date),
       supabase.from('workout_logs').select('*').eq('user_id', user!.id).eq('log_date', date),
@@ -60,6 +73,8 @@ export default function CalendarPage() {
   }
 
   function handleDayClick(date: string) {
+    // If clicking the already-selected date, keep it selected and don't re-fetch
+    if (selected === date) return
     setSelected(date)
     loadDayDetail(date)
   }
@@ -110,11 +125,12 @@ export default function CalendarPage() {
           </div>
           <div className="grid grid-cols-7 gap-1">
             {calDays.map(day => {
+              // Use string key comparison for today — avoids timezone issues with isToday()
               const key = format(day, 'yyyy-MM-dd')
               const s = summaries.get(key)
               const isCurrentMonth = day.getMonth() === current.getMonth()
               const isSel = selected === key
-              const isT = format(day, 'yyyy-MM-dd') === getLocalToday()
+              const isT = key === todayKey
 
               return (
                 <button
@@ -123,16 +139,20 @@ export default function CalendarPage() {
                   className={`
                     aspect-square rounded-lg p-1 flex flex-col items-center justify-center relative transition-all text-xs
                     ${isCurrentMonth ? 'hover:bg-gray-50' : 'opacity-30'}
-                    ${isSel ? 'ring-2 ring-sky-400 bg-sky-50' : ''}
+                    ${isSel && !isT ? 'ring-2 ring-sky-400 bg-sky-50' : ''}
+                    ${isSel && isT ? 'ring-2 ring-sky-600 bg-sky-500 text-white' : ''}
                     ${isT && !isSel ? 'bg-sky-500 text-white' : ''}
                     ${!isT && !isSel ? 'text-gray-700' : ''}
                   `}
                 >
-                  <span className={`font-medium ${isT && !isSel ? 'text-white' : ''}`}>{format(day, 'd')}</span>
+                  <span className={`font-medium ${isT ? 'text-white' : ''}`}>{format(day, 'd')}</span>
                   {s?.logged && (
                     <div className="flex gap-0.5 mt-0.5">
-                      <span className={`w-1 h-1 rounded-full ${isT && !isSel ? 'bg-white' : 'bg-green-400'}`} />
-                      {s.workouts > 0 && <span className={`w-1 h-1 rounded-full ${isT && !isSel ? 'bg-white' : 'bg-blue-400'}`} />}
+                      {/* Green dot for diet - always show on non-today days; show white on today */}
+                      <span className={`w-1 h-1 rounded-full ${isT ? 'bg-white' : 'bg-green-400'}`} />
+                      {s.workouts > 0 && (
+                        <span className={`w-1 h-1 rounded-full ${isT ? 'bg-white' : 'bg-blue-400'}`} />
+                      )}
                     </div>
                   )}
                 </button>
@@ -206,14 +226,14 @@ export default function CalendarPage() {
       {/* Weight trend chart */}
       {weightData.length > 1 && (
         <div className="card">
-          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Weight trend</h3>
-          <ResponsiveContainer width="100%" height={160}>
+          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Weight Trend</h3>
+          <ResponsiveContainer width="100%" height={200}>
             <LineChart data={weightData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="date" tickFormatter={d => format(parseISO(d), 'MMM d')} tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
-              <YAxis domain={['auto', 'auto']} tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} width={40} />
-              <Tooltip formatter={(v: number) => [`${v} kg`, 'Weight']} labelFormatter={d => format(parseISO(d), 'MMM d, yyyy')} />
-              <Line type="monotone" dataKey="weight" stroke="#0284c7" strokeWidth={2} dot={{ fill: '#0284c7', r: 3 }} activeDot={{ r: 5 }} />
+              <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={d => format(parseISO(d), 'MMM d')} />
+              <YAxis tick={{ fontSize: 11 }} domain={['auto', 'auto']} />
+              <Tooltip formatter={(v: any) => [`${v} kg`, 'Weight']} labelFormatter={d => format(parseISO(d), 'MMM d, yyyy')} />
+              <Line type="monotone" dataKey="weight" stroke="#0ea5e9" strokeWidth={2} dot={{ r: 3 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -226,13 +246,8 @@ function StatCard({ label, value, icon }: { label: string; value: string; icon: 
   return (
     <div className="card text-center py-4">
       <div className="text-2xl mb-1">{icon}</div>
-      <div className="text-xl font-semibold text-gray-900">{value}</div>
+      <div className="text-xl font-bold text-gray-900">{value}</div>
       <div className="text-xs text-gray-500 mt-0.5">{label}</div>
     </div>
   )
-}
-
-function getLocalToday() {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 }
