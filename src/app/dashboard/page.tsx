@@ -14,9 +14,15 @@ type Plan = {
   workout: { name: string; duration_minutes: number; description: string; calories_burned: number }
 }
 
-type FoodLog = { calories: number; protein_g: number | null; carbs_g: number | null; fat_g: number | null; meal_type: string; food_name: string }
+type FoodLog = {
+  calories: number
+  protein_g: number | null
+  carbs_g: number | null
+  fat_g: number | null
+  meal_type: string
+  food_name: string
+}
 type WorkoutLog = { workout_type: string; duration_minutes: number; calories_burned: number | null }
-type WeeklyEntry = { date: string; calories: number }
 
 const MEAL_ICONS: Record<string, string> = { breakfast: '🌅', lunch: '☀️', dinner: '🌙', snack: '🍎' }
 const MEAL_COLORS: Record<string, string> = {
@@ -26,17 +32,41 @@ const MEAL_COLORS: Record<string, string> = {
   snack: 'bg-pink-50 border-pink-200',
 }
 
+// ─── localStorage cache helpers ──────────────────────────────────────────────
+// Keyed by userId + date → plan is generated at most once per day.
+// User can force a regenerate which overwrites the cache.
+function getPlanCacheKey(userId: string, date: string) {
+  return `ht_plan_${userId}_${date}`
+}
+function loadCachedPlan(userId: string, date: string): Plan | null {
+  try {
+    const raw = localStorage.getItem(getPlanCacheKey(userId, date))
+    return raw ? JSON.parse(raw) : null
+  } catch { return null }
+}
+function savePlanCache(userId: string, date: string, plan: Plan) {
+  try {
+    localStorage.setItem(getPlanCacheKey(userId, date), JSON.stringify(plan))
+  } catch { /* storage full — ignore */ }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [plan, setPlan] = useState<Plan | null>(null)
-  const [planLoading, setPlanLoading] = useState(true)
+  const [planLoading, setPlanLoading] = useState(false)
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>([])
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([])
-  const [weeklyData, setWeeklyData] = useState<WeeklyEntry[]>([])
+  const [weeklyData, setWeeklyData] = useState<{ date: string; label: string; calories: number }[]>([])
   const [feedback, setFeedback] = useState('')
   const [loading, setLoading] = useState(true)
-  const [profile, setProfile] = useState<{ daily_calorie_target: number; daily_protein_target: number; goal: string } | null>(null)
+  const [profile, setProfile] = useState<{
+    daily_calorie_target: number
+    daily_protein_target: number
+    goal: string
+  } | null>(null)
+
   const today = format(new Date(), 'yyyy-MM-dd')
   const sevenDaysAgo = format(subDays(new Date(), 6), 'yyyy-MM-dd')
 
@@ -47,7 +77,6 @@ export default function DashboardPage() {
     setLoading(true)
     const userId = user!.id
 
-    // Fetch all data in parallel — including weekly summary
     const [
       { data: profileData },
       { data: foodData },
@@ -65,17 +94,14 @@ export default function DashboardPage() {
         .lte('log_date', today),
     ])
 
-    // Set data and unblock the UI immediately
     setProfile(profileData)
     setFoodLogs(foodData || [])
     setWorkoutLogs(workoutData || [])
 
-    // Aggregate weekly calories by day
+    // Build weekly bar chart — pre-fill all 7 days so empty days show as 0
     const dayMap = new Map<string, number>()
-    // Pre-fill all 7 days with 0 so empty days still show on chart
     for (let i = 6; i >= 0; i--) {
-      const d = format(subDays(new Date(), i), 'yyyy-MM-dd')
-      dayMap.set(d, 0)
+      dayMap.set(format(subDays(new Date(), i), 'yyyy-MM-dd'), 0)
     }
     weekData?.forEach(({ log_date, calories }: { log_date: string; calories: number }) => {
       dayMap.set(log_date, (dayMap.get(log_date) || 0) + calories)
@@ -85,55 +111,67 @@ export default function DashboardPage() {
         date,
         calories,
         label: format(new Date(date + 'T00:00:00'), 'EEE'),
-      })) as any
+      }))
     )
 
-    setLoading(false) // ← Unblock UI before AI calls
+    setLoading(false) // ← UI unblocks here, no AI calls yet
 
-    // AI plan + feedback run in background — don't block loading
-    if (profileData) {
-      setPlanLoading(true)
+    // Restore cached plan from localStorage — zero API calls
+    const cached = loadCachedPlan(userId, today)
+    if (cached) setPlan(cached)
+  }
+
+  // ─── On-demand: called when user clicks "Generate" or "↺ Regenerate" ───────
+  async function generatePlan(force = false) {
+    if (!profile || !user || planLoading) return
+
+    // If cached and not forcing, just show cache (shouldn't normally reach here)
+    const cached = loadCachedPlan(user.id, today)
+    if (cached && !force) { setPlan(cached); return }
+
+    setPlanLoading(true)
+    try {
+      const res = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'generate_plan', data: { profile } }),
+      })
+      const { data: planData } = await res.json()
+      if (planData) {
+        setPlan(planData)
+        savePlanCache(user.id, today, planData) // Cache for the rest of the day
+      }
+    } catch (e) {
+      console.error('AI plan failed', e)
+    }
+    setPlanLoading(false)
+
+    // Piggyback: also fetch feedback if food is already logged today
+    if (foodLogs.length > 0) {
       try {
-        const res = await fetch('/api/ai', {
+        const fbRes = await fetch('/api/ai', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'generate_plan', data: { profile: profileData } }),
-        })
-        const { data: planData } = await res.json()
-        setPlan(planData)
-      } catch (e) {
-        console.error('AI plan failed', e)
-      }
-      setPlanLoading(false)
-
-      // AI feedback only if food was logged today
-      if (foodData && foodData.length > 0) {
-        try {
-          const fbRes = await fetch('/api/ai', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'daily_feedback',
-              data: {
-                logs: foodData,
-                targets: {
-                  calories: profileData.daily_calorie_target,
-                  protein_g: profileData.daily_protein_target,
-                },
-                date: today,
+          body: JSON.stringify({
+            action: 'daily_feedback',
+            data: {
+              logs: foodLogs,
+              targets: {
+                calories: profile.daily_calorie_target,
+                protein_g: profile.daily_protein_target,
               },
-            }),
-          })
-          const { data: fbData } = await fbRes.json()
-          if (fbData?.feedback) setFeedback(fbData.feedback)
-        } catch (e) {
-          console.error('AI feedback failed', e)
-        }
+              date: today,
+            },
+          }),
+        })
+        const { data: fbData } = await fbRes.json()
+        if (fbData?.feedback) setFeedback(fbData.feedback)
+      } catch (e) {
+        console.error('AI feedback failed', e)
       }
-    } else {
-      setPlanLoading(false)
     }
   }
+  // ─────────────────────────────────────────────────────────────────────────────
 
   const totalCals = foodLogs.reduce((s, l) => s + l.calories, 0)
   const totalProtein = foodLogs.reduce((s, l) => s + (l.protein_g || 0), 0)
@@ -142,7 +180,6 @@ export default function DashboardPage() {
   const calPct = Math.min(100, Math.round((totalCals / calTarget) * 100))
   const calRemaining = Math.max(0, calTarget - totalCals)
 
-  // SVG ring helpers
   const R = 52, C = 2 * Math.PI * R
   const calDash = C - (calPct / 100) * C
 
@@ -160,6 +197,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -170,7 +208,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* AI Feedback */}
+      {/* AI Feedback banner */}
       {feedback && (
         <div className="bg-sky-50 border border-sky-200 rounded-xl px-4 py-3 flex gap-3">
           <span className="text-lg flex-shrink-0">✦</span>
@@ -180,6 +218,7 @@ export default function DashboardPage() {
 
       {/* Stats row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
         {/* Calorie ring */}
         <div className="card flex items-center gap-4">
           <div className="relative flex-shrink-0">
@@ -192,7 +231,6 @@ export default function DashboardPage() {
                 strokeDasharray={C}
                 strokeDashoffset={calDash}
                 strokeLinecap="round"
-                className="ring-progress"
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -252,13 +290,13 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Weekly summary chart */}
+      {/* Weekly bar chart */}
       <div className="card">
         <div className="flex items-center gap-2 mb-4">
           <span>📊</span>
           <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">This week at a glance</h2>
         </div>
-        {weeklyData.length === 0 ? (
+        {weeklyData.every(d => d.calories === 0) ? (
           <p className="text-sm text-gray-400 italic text-center py-6">No data logged this week yet.</p>
         ) : (
           <ResponsiveContainer width="100%" height={160}>
@@ -270,11 +308,8 @@ export default function DashboardPage() {
                 contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
               />
               <Bar dataKey="calories" radius={[6, 6, 0, 0]}>
-                {weeklyData.map((entry: any, index: number) => (
-                  <Cell
-                    key={index}
-                    fill={entry.date === today ? '#0284c7' : '#bae6fd'}
-                  />
+                {weeklyData.map((entry, index) => (
+                  <Cell key={index} fill={entry.date === today ? '#0284c7' : '#bae6fd'} />
                 ))}
               </Bar>
             </BarChart>
@@ -282,50 +317,102 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* AI Plan */}
-      {planLoading ? (
-        <div className="card space-y-3">
-          <div className="skeleton h-4 w-40" />
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[...Array(4)].map((_, i) => <div key={i} className="skeleton h-20 rounded-xl" />)}
+      {/* AI Plan section */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <span>✦</span>
+            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+              AI suggested plan for today
+            </h2>
+          </div>
+          <div className="flex items-center gap-2">
+            {plan ? (
+              // Already have a plan — show small Regenerate button
+              <button
+                onClick={() => generatePlan(true)}
+                disabled={planLoading}
+                className="text-xs text-gray-400 hover:text-gray-600 border border-gray-200 px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-40"
+                title="Fetch a fresh plan (1 AI call)"
+              >
+                {planLoading ? '…' : '↺ Regenerate'}
+              </button>
+            ) : (
+              // No plan yet — show primary CTA
+              <button
+                onClick={() => generatePlan(false)}
+                disabled={planLoading || !profile}
+                className="flex items-center gap-1.5 text-sm bg-sky-500 hover:bg-sky-600 disabled:opacity-50 text-white px-4 py-2 rounded-xl font-medium transition-colors"
+              >
+                {planLoading ? (
+                  <>
+                    <span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full" />
+                    Generating…
+                  </>
+                ) : '✦ Generate today\'s plan'}
+              </button>
+            )}
           </div>
         </div>
-      ) : plan ? (
-        <div className="card">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-base">✦</span>
-            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">AI suggested plan for today</h2>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map(meal => (
-              <div key={meal} className={`rounded-xl border p-3 ${MEAL_COLORS[meal]}`}>
-                <div className="text-lg mb-1">{MEAL_ICONS[meal]}</div>
-                <div className="text-xs font-semibold text-gray-700 capitalize">{meal}</div>
-                <div className="text-sm font-medium text-gray-900 mt-1 leading-tight">{plan.meals[meal]?.name}</div>
-                <div className="text-xs text-gray-500 mt-1">{plan.meals[meal]?.calories} kcal</div>
-              </div>
-            ))}
-          </div>
-          {plan.workout && (
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-start gap-3 mb-3">
-              <span className="text-xl">🏋️</span>
-              <div>
-                <div className="text-sm font-semibold text-blue-800">{plan.workout.name} · {plan.workout.duration_minutes} min</div>
-                <div className="text-xs text-blue-600 mt-0.5">{plan.workout.description}</div>
-              </div>
+
+        {/* Loading skeleton (only when no plan exists yet) */}
+        {planLoading && !plan && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[...Array(4)].map((_, i) => <div key={i} className="skeleton h-20 rounded-xl" />)}
             </div>
-          )}
-          {plan.tip && (
-            <div className="text-sm text-gray-600 italic border-t border-gray-100 pt-3">
-              💡 {plan.tip}
+            <div className="skeleton h-14 rounded-xl" />
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!planLoading && !plan && (
+          <div className="text-center py-8 text-gray-400">
+            <div className="text-4xl mb-3">🥗</div>
+            <p className="text-sm">
+              {profile
+                ? 'Click the button above to get a personalized meal & workout plan.'
+                : <>Complete your <a href="/profile" className="text-sky-500 hover:underline">profile</a> first.</>
+              }
+            </p>
+          </div>
+        )}
+
+        {/* Plan cards */}
+        {plan && (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map(meal => (
+                <div key={meal} className={`rounded-xl border p-3 ${MEAL_COLORS[meal]}`}>
+                  <div className="text-lg mb-1">{MEAL_ICONS[meal]}</div>
+                  <div className="text-xs font-semibold text-gray-700 capitalize">{meal}</div>
+                  <div className="text-sm font-medium text-gray-900 mt-1 leading-tight">
+                    {plan.meals[meal]?.name}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">{plan.meals[meal]?.calories} kcal</div>
+                </div>
+              ))}
             </div>
-          )}
-        </div>
-      ) : (
-        <div className="card text-center py-8">
-          <p className="text-gray-500 text-sm">No profile found. <a href="/profile" className="text-sky-600 hover:underline">Set up your profile</a> to get a personalized plan.</p>
-        </div>
-      )}
+            {plan.workout && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-start gap-3 mb-3">
+                <span className="text-xl">🏋️</span>
+                <div>
+                  <div className="text-sm font-semibold text-blue-800">
+                    {plan.workout.name} · {plan.workout.duration_minutes} min
+                  </div>
+                  <div className="text-xs text-blue-600 mt-0.5">{plan.workout.description}</div>
+                </div>
+              </div>
+            )}
+            {plan.tip && (
+              <div className="text-sm text-gray-600 italic border-t border-gray-100 pt-3">
+                💡 {plan.tip}
+              </div>
+            )}
+            <p className="text-xs text-gray-300 mt-3 text-right">Cached for today · regenerate to refresh</p>
+          </>
+        )}
+      </div>
 
       {/* Quick links */}
       <div className="grid grid-cols-2 gap-4">
@@ -340,11 +427,14 @@ export default function DashboardPage() {
           <div className="text-xs text-gray-400 mt-1">See your progress</div>
         </a>
       </div>
+
     </div>
   )
 }
 
-function MacroBar({ label, value, target, unit, color }: { label: string; value: number; target: number; unit: string; color: string }) {
+function MacroBar({ label, value, target, unit, color }: {
+  label: string; value: number; target: number; unit: string; color: string
+}) {
   const pct = Math.min(100, Math.round((value / target) * 100))
   return (
     <div>
