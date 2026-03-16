@@ -1,136 +1,220 @@
-'use client'
-import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/lib/auth-context'
-import { useRouter } from 'next/navigation'
-import { format, subDays } from 'date-fns'
+"use client";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/auth-context";
+import { useRouter } from "next/navigation";
+import { format, subDays } from "date-fns";
 
 type Plan = {
-  daily_calories: number
-  daily_protein_g: number
-  tip: string
-  meals: Record<string, { name: string; calories: number; description: string }>
-  workout: { name: string; duration_minutes: number; description: string; calories_burned: number }
-}
+  daily_calories: number;
+  daily_protein_g: number;
+  tip: string;
+  meals: Record<
+    string,
+    { name: string; calories: number; description: string }
+  >;
+  workout: {
+    name: string;
+    duration_minutes: number;
+    description: string;
+    calories_burned: number;
+  };
+};
 
-type FoodLog = { calories: number; protein_g: number | null; meal_type: string; food_name: string }
-type WorkoutLog = { workout_type: string; duration_minutes: number; calories_burned: number | null }
+type FoodLog = {
+  calories: number;
+  protein_g: number | null;
+  meal_type: string;
+  food_name: string;
+};
+type WorkoutLog = {
+  workout_type: string;
+  duration_minutes: number;
+  calories_burned: number | null;
+};
 
-const MEAL_ICONS: Record<string, string> = { breakfast: '🌅', lunch: '☀️', dinner: '🌙', snack: '🍎' }
+const MEAL_ICONS: Record<string, string> = {
+  breakfast: "🌅",
+  lunch: "☀️",
+  dinner: "🌙",
+  snack: "🍎",
+};
 const MEAL_COLORS: Record<string, string> = {
-  breakfast: 'bg-amber-50 border-amber-200',
-  lunch: 'bg-green-50 border-green-200',
-  dinner: 'bg-blue-50 border-blue-200',
-  snack: 'bg-pink-50 border-pink-200',
-}
+  breakfast: "bg-amber-50 border-amber-200",
+  lunch: "bg-green-50 border-green-200",
+  dinner: "bg-blue-50 border-blue-200",
+  snack: "bg-pink-50 border-pink-200",
+};
 
 export default function DashboardPage() {
-  const { user, loading: authLoading } = useAuth()
-  const router = useRouter()
-  const [plan, setPlan] = useState<Plan | null>(null)
-  const [foodLogs, setFoodLogs] = useState<FoodLog[]>([])
-  const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([])
-  const [feedback, setFeedback] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [streak, setStreak] = useState(0)
-  const [profile, setProfile] = useState<{ daily_calorie_target: number; daily_protein_target: number; goal: string } | null>(null)
-  const today = format(new Date(), 'yyyy-MM-dd')
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const [plan, setPlan] = useState<Plan | null>(null);
+  const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
+  const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
+  const [feedback, setFeedback] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [streak, setStreak] = useState(0);
+  const [profile, setProfile] = useState<{
+    daily_calorie_target: number | null;
+    daily_protein_target: number | null;
+    goal: string;
+    height_cm: number | null;
+    weight_kg: number | null;
+    age: number | null;
+    sex: string;
+    activity_level: string;
+  } | null>(null);
+  const today = format(new Date(), "yyyy-MM-dd");
 
-  useEffect(() => { if (!authLoading && !user) router.push('/login') }, [user, authLoading])
-  useEffect(() => { if (user) loadData() }, [user])
+  useEffect(() => {
+    if (!authLoading && !user) router.push("/login");
+  }, [user, authLoading]);
+  useEffect(() => {
+    if (user) loadData();
+  }, [user]);
 
   async function loadData() {
-    setLoading(true)
-    const userId = user!.id
+    setLoading(true);
+    const userId = user!.id;
 
-    const [{ data: profileData }, { data: foodData }, { data: workoutData }] = await Promise.all([
-      supabase.from('profiles').select('*').eq('id', userId).single(),
-      supabase.from('food_logs').select('*').eq('user_id', userId).eq('log_date', today),
-      supabase.from('workout_logs').select('*').eq('user_id', userId).eq('log_date', today),
-    ])
+    const [{ data: profileData }, { data: foodData }, { data: workoutData }] =
+      await Promise.all([
+        supabase.from("profiles").select("*").eq("id", userId).single(),
+        supabase
+          .from("food_logs")
+          .select("*")
+          .eq("user_id", userId)
+          .eq("log_date", today),
+        supabase
+          .from("workout_logs")
+          .select("*")
+          .eq("user_id", userId)
+          .eq("log_date", today),
+      ]);
 
     if (profileData && profileData.height_cm) {
-      setProfile(profileData)
-      setFoodLogs(foodData || [])
-      setWorkoutLogs(workoutData || [])
+      setProfile(profileData);
+      setFoodLogs(foodData || []);
+      setWorkoutLogs(workoutData || []);
 
       // Calculate streak
-      await calculateStreak(userId)
+      await calculateStreak(userId);
 
       // Generate AI plan
-      const res = await fetch('/api/ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'generate_plan', data: { profile: profileData } }),
-      })
-      const { data: planData } = await res.json()
-      setPlan(planData)
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "generate_plan",
+          data: { profile: profileData },
+        }),
+      });
+      const { data: planData } = await res.json();
+      setPlan(planData);
 
       // Get AI feedback if there are logs
       if (foodData && foodData.length > 0) {
-        const fbRes = await fetch('/api/ai', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const fbRes = await fetch("/api/ai", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            action: 'daily_feedback',
+            action: "daily_feedback",
             data: {
               logs: foodData,
-              targets: { calories: profileData.daily_calorie_target, protein_g: profileData.daily_protein_target },
+              targets: {
+                calories: profileData.daily_calorie_target,
+                protein_g: profileData.daily_protein_target,
+              },
               date: today,
             },
           }),
-        })
-        const { data: fbData } = await fbRes.json()
-        if (fbData?.feedback) setFeedback(fbData.feedback)
+        });
+        const { data: fbData } = await fbRes.json();
+        if (fbData?.feedback) setFeedback(fbData.feedback);
       }
     } else {
       // Profile incomplete — send to profile setup
-      router.push('/profile')
+      router.push("/profile");
     }
 
-    setLoading(false)
+    setLoading(false);
   }
 
   async function calculateStreak(userId: string) {
     const { data } = await supabase
-      .from('food_logs')
-      .select('log_date')
-      .eq('user_id', userId)
-      .order('log_date', { ascending: false })
+      .from("food_logs")
+      .select("log_date")
+      .eq("user_id", userId)
+      .order("log_date", { ascending: false });
 
     if (!data || data.length === 0) {
-      setStreak(0)
-      return
+      setStreak(0);
+      return;
     }
 
-    const loggedDates = new Set(data.map(r => r.log_date))
+    const loggedDates = new Set(data.map((r) => r.log_date));
 
-    let count = 0
-    let cursor = new Date()
+    let count = 0;
+    let cursor = new Date();
     while (true) {
-      const dateStr = format(cursor, 'yyyy-MM-dd')
+      const dateStr = format(cursor, "yyyy-MM-dd");
       if (loggedDates.has(dateStr)) {
-        count++
-        cursor = subDays(cursor, 1)
+        count++;
+        cursor = subDays(cursor, 1);
       } else {
-        break
+        break;
       }
     }
 
-    setStreak(count)
+    setStreak(count);
   }
 
-  const totalCals = foodLogs.reduce((s, l) => s + l.calories, 0)
-  const totalProtein = foodLogs.reduce((s, l) => s + (l.protein_g || 0), 0)
-  const calTarget = profile?.daily_calorie_target || (plan?.daily_calories ?? 2000)
-  const protTarget = profile?.daily_protein_target || (plan?.daily_protein_g ?? 150)
-  const calPct = Math.min(100, Math.round((totalCals / calTarget) * 100))
-  const protPct = Math.min(100, Math.round((totalProtein / protTarget) * 100))
-  const calRemaining = Math.max(0, calTarget - totalCals)
+  const totalCals = foodLogs.reduce((s, l) => s + l.calories, 0);
+  const totalProtein = foodLogs.reduce((s, l) => s + (l.protein_g || 0), 0);
+  // AFTER — add a helper function above the return, then use it:
+  function computeTargets(p: typeof profile) {
+    if (!p) return { calories: 2000, protein: 150 };
+    if (p.daily_calorie_target && p.daily_protein_target)
+      return {
+        calories: p.daily_calorie_target,
+        protein: p.daily_protein_target,
+      };
+    // Fall back to BMR estimate from profile stats
+    const h = (p as any).height_cm || 170;
+    const w = (p as any).weight_kg || 70;
+    const a = (p as any).age || 25;
+    const sex = (p as any).sex || "male";
+    const activity = (p as any).activity_level || "lightly_active";
+    const goal = p.goal || "lose_weight";
+    const bmr =
+      sex === "female"
+        ? 10 * w + 6.25 * h - 5 * a - 161
+        : 10 * w + 6.25 * h - 5 * a + 5;
+    const mult: Record<string, number> = {
+      sedentary: 1.2,
+      lightly_active: 1.375,
+      moderately_active: 1.55,
+      very_active: 1.725,
+    };
+    const tdee = Math.round(bmr * (mult[activity] || 1.375));
+    const adj =
+      goal === "lose_weight" ? -500 : goal === "build_muscle" ? 300 : 0;
+    return {
+      calories: Math.max(1200, tdee + adj),
+      protein: Math.round(w * (goal === "build_muscle" ? 2.0 : 1.6)),
+    };
+  }
+
+  const { calories: calTarget, protein: protTarget } = computeTargets(profile);
+  const calPct = Math.min(100, Math.round((totalCals / calTarget) * 100));
+  const protPct = Math.min(100, Math.round((totalProtein / protTarget) * 100));
+  const calRemaining = Math.max(0, calTarget - totalCals);
 
   // SVG ring helpers
-  const R = 52, C = 2 * Math.PI * R
-  const calDash = C - (calPct / 100) * C
+  const R = 52,
+    C = 2 * Math.PI * R;
+  const calDash = C - (calPct / 100) * C;
 
   return (
     <div className="space-y-6">
@@ -140,14 +224,18 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-semibold text-gray-900">
             Good {getGreeting()}, you! 👋
           </h1>
-          <p className="text-gray-500 text-sm mt-1">{format(new Date(), 'EEEE, MMMM d')}</p>
+          <p className="text-gray-500 text-sm mt-1">
+            {format(new Date(), "EEEE, MMMM d")}
+          </p>
         </div>
         {/* Streak badge — only shown when streak > 0 */}
         {streak > 0 && (
           <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2">
             <span className="text-xl">🔥</span>
             <div>
-              <div className="text-lg font-semibold text-amber-700">{streak}</div>
+              <div className="text-lg font-semibold text-amber-700">
+                {streak}
+              </div>
               <div className="text-xs text-amber-600">day streak</div>
             </div>
           </div>
@@ -168,10 +256,20 @@ export default function DashboardPage() {
         <div className="card flex items-center gap-4">
           <div className="relative flex-shrink-0">
             <svg width="120" height="120" viewBox="0 0 120 120">
-              <circle cx="60" cy="60" r={R} fill="none" stroke="#e5e7eb" strokeWidth="10" />
               <circle
-                cx="60" cy="60" r={R} fill="none"
-                stroke={calPct >= 100 ? '#16a34a' : '#0284c7'}
+                cx="60"
+                cy="60"
+                r={R}
+                fill="none"
+                stroke="#e5e7eb"
+                strokeWidth="10"
+              />
+              <circle
+                cx="60"
+                cy="60"
+                r={R}
+                fill="none"
+                stroke={calPct >= 100 ? "#16a34a" : "#0284c7"}
                 strokeWidth="10"
                 strokeDasharray={C}
                 strokeDashoffset={calDash}
@@ -180,16 +278,27 @@ export default function DashboardPage() {
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-lg font-semibold text-gray-900">{totalCals}</span>
+              <span className="text-lg font-semibold text-gray-900">
+                {totalCals}
+              </span>
               <span className="text-xs text-gray-500">kcal</span>
             </div>
           </div>
           <div className="flex-1">
-            <div className="text-sm font-medium text-gray-700">Calories today</div>
-            <div className="text-xs text-gray-500 mt-1">Goal: {calTarget} kcal</div>
-            <div className="text-xs text-sky-600 mt-1">{calRemaining} remaining</div>
+            <div className="text-sm font-medium text-gray-700">
+              Calories today
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              Goal: {calTarget} kcal
+            </div>
+            <div className="text-xs text-sky-600 mt-1">
+              {calRemaining} remaining
+            </div>
             <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-              <div className="h-full bg-sky-500 rounded-full transition-all" style={{ width: `${calPct}%` }} />
+              <div
+                className="h-full bg-sky-500 rounded-full transition-all"
+                style={{ width: `${calPct}%` }}
+              />
             </div>
           </div>
         </div>
@@ -197,30 +306,61 @@ export default function DashboardPage() {
         {/* Macros */}
         <div className="card space-y-3">
           <div className="text-sm font-medium text-gray-700">Macros</div>
-          <MacroBar label="Protein" value={totalProtein} target={protTarget} unit="g" color="bg-blue-500" />
-          <MacroBar label="Carbs" value={foodLogs.reduce((s, l: any) => s + (l.carbs_g || 0), 0)} target={Math.round(calTarget * 0.45 / 4)} unit="g" color="bg-amber-400" />
-          <MacroBar label="Fat" value={foodLogs.reduce((s, l: any) => s + (l.fat_g || 0), 0)} target={Math.round(calTarget * 0.3 / 9)} unit="g" color="bg-purple-400" />
+          <MacroBar
+            label="Protein"
+            value={totalProtein}
+            target={protTarget}
+            unit="g"
+            color="bg-blue-500"
+          />
+          <MacroBar
+            label="Carbs"
+            value={foodLogs.reduce((s, l: any) => s + (l.carbs_g || 0), 0)}
+            target={Math.round((calTarget * 0.45) / 4)}
+            unit="g"
+            color="bg-amber-400"
+          />
+          <MacroBar
+            label="Fat"
+            value={foodLogs.reduce((s, l: any) => s + (l.fat_g || 0), 0)}
+            target={Math.round((calTarget * 0.3) / 9)}
+            unit="g"
+            color="bg-purple-400"
+          />
         </div>
 
         {/* Workout summary */}
         <div className="card">
-          <div className="text-sm font-medium text-gray-700 mb-3">Today's activity</div>
+          <div className="text-sm font-medium text-gray-700 mb-3">
+            Today's activity
+          </div>
           {workoutLogs.length === 0 ? (
-            <div className="text-sm text-gray-400 italic">No workouts logged yet</div>
+            <div className="text-sm text-gray-400 italic">
+              No workouts logged yet
+            </div>
           ) : (
             <div className="space-y-2">
               {workoutLogs.map((w, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <span className="text-lg">🏃</span>
                   <div>
-                    <div className="text-sm font-medium text-gray-800">{w.workout_type}</div>
-                    <div className="text-xs text-gray-500">{w.duration_minutes} min · {w.calories_burned || '—'} kcal</div>
+                    <div className="text-sm font-medium text-gray-800">
+                      {w.workout_type}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {w.duration_minutes} min · {w.calories_burned || "—"} kcal
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
-          <a href="/log" className="mt-3 block text-xs text-sky-600 hover:underline">+ Log workout</a>
+          <a
+            href="/log"
+            className="mt-3 block text-xs text-sky-600 hover:underline"
+          >
+            + Log workout
+          </a>
         </div>
       </div>
 
@@ -229,23 +369,44 @@ export default function DashboardPage() {
         <div className="card space-y-3">
           <div className="skeleton h-4 w-40" />
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[...Array(4)].map((_, i) => <div key={i} className="skeleton h-20 rounded-xl" />)}
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="skeleton h-20 rounded-xl" />
+            ))}
           </div>
         </div>
       ) : plan ? (
         <div className="card">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Today's plan</h2>
-            {plan.tip && <p className="text-xs text-gray-400 italic max-w-xs text-right">{plan.tip}</p>}
+            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+              Today's plan
+            </h2>
+            {plan.tip && (
+              <p className="text-xs text-gray-400 italic max-w-xs text-right">
+                {plan.tip}
+              </p>
+            )}
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {Object.entries(plan.meals).map(([key, meal]) => (
-              <div key={key} className={`rounded-xl border p-3 ${MEAL_COLORS[key] || 'bg-gray-50 border-gray-200'}`}>
-                <div className="text-lg mb-1">{MEAL_ICONS[key] || '🍽️'}</div>
-                <div className="text-xs font-semibold text-gray-700 capitalize">{key}</div>
-                <div className="text-xs text-gray-600 mt-0.5 font-medium">{meal.name}</div>
-                <div className="text-xs text-gray-400 mt-0.5">{meal.calories} kcal</div>
-                {meal.description && <div className="text-xs text-gray-400 mt-1 leading-relaxed">{meal.description}</div>}
+              <div
+                key={key}
+                className={`rounded-xl border p-3 ${MEAL_COLORS[key] || "bg-gray-50 border-gray-200"}`}
+              >
+                <div className="text-lg mb-1">{MEAL_ICONS[key] || "🍽️"}</div>
+                <div className="text-xs font-semibold text-gray-700 capitalize">
+                  {key}
+                </div>
+                <div className="text-xs text-gray-600 mt-0.5 font-medium">
+                  {meal.name}
+                </div>
+                <div className="text-xs text-gray-400 mt-0.5">
+                  {meal.calories} kcal
+                </div>
+                {meal.description && (
+                  <div className="text-xs text-gray-400 mt-1 leading-relaxed">
+                    {meal.description}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -253,9 +414,18 @@ export default function DashboardPage() {
             <div className="mt-3 pt-3 border-t border-gray-100 flex items-start gap-3">
               <span className="text-xl">🏋️</span>
               <div>
-                <div className="text-xs font-semibold text-gray-700">{plan.workout.name}</div>
-                <div className="text-xs text-gray-500">{plan.workout.duration_minutes} min · {plan.workout.calories_burned} kcal</div>
-                {plan.workout.description && <div className="text-xs text-gray-400 mt-0.5">{plan.workout.description}</div>}
+                <div className="text-xs font-semibold text-gray-700">
+                  {plan.workout.name}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {plan.workout.duration_minutes} min ·{" "}
+                  {plan.workout.calories_burned} kcal
+                </div>
+                {plan.workout.description && (
+                  <div className="text-xs text-gray-400 mt-0.5">
+                    {plan.workout.description}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -264,46 +434,78 @@ export default function DashboardPage() {
         <div className="card text-center py-8">
           <div className="text-3xl mb-2">👋</div>
           <p className="text-sm text-gray-500">
-            <a href="/profile" className="text-sky-600 hover:underline">Set up your profile</a> to get a personalized plan.
+            <a href="/profile" className="text-sky-600 hover:underline">
+              Set up your profile
+            </a>{" "}
+            to get a personalized plan.
           </p>
         </div>
       )}
 
       {/* Quick links */}
       <div className="grid grid-cols-2 gap-4">
-        <a href="/log" className="card hover:border-sky-300 hover:bg-sky-50 transition-colors cursor-pointer text-center py-5 block">
+        <a
+          href="/log"
+          className="card hover:border-sky-300 hover:bg-sky-50 transition-colors cursor-pointer text-center py-5 block"
+        >
           <div className="text-3xl mb-2">📋</div>
-          <div className="text-sm font-medium text-gray-700">Log today's meals</div>
-          <div className="text-xs text-gray-400 mt-1">{foodLogs.length} items logged</div>
+          <div className="text-sm font-medium text-gray-700">
+            Log today's meals
+          </div>
+          <div className="text-xs text-gray-400 mt-1">
+            {foodLogs.length} items logged
+          </div>
         </a>
-        <a href="/calendar" className="card hover:border-sky-300 hover:bg-sky-50 transition-colors cursor-pointer text-center py-5 block">
+        <a
+          href="/calendar"
+          className="card hover:border-sky-300 hover:bg-sky-50 transition-colors cursor-pointer text-center py-5 block"
+        >
           <div className="text-3xl mb-2">📅</div>
           <div className="text-sm font-medium text-gray-700">View calendar</div>
           <div className="text-xs text-gray-400 mt-1">See your progress</div>
         </a>
       </div>
     </div>
-  )
+  );
 }
 
-function MacroBar({ label, value, target, unit, color }: { label: string; value: number; target: number; unit: string; color: string }) {
-  const pct = Math.min(100, Math.round((value / target) * 100))
+function MacroBar({
+  label,
+  value,
+  target,
+  unit,
+  color,
+}: {
+  label: string;
+  value: number;
+  target: number;
+  unit: string;
+  color: string;
+}) {
+  const pct = Math.min(100, Math.round((value / target) * 100));
   return (
     <div>
       <div className="flex justify-between text-xs mb-1">
         <span className="text-gray-600">{label}</span>
-        <span className="text-gray-500">{Math.round(value)}{unit} / {target}{unit}</span>
+        <span className="text-gray-500">
+          {Math.round(value)}
+          {unit} / {target}
+          {unit}
+        </span>
       </div>
       <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+        <div
+          className={`h-full rounded-full transition-all ${color}`}
+          style={{ width: `${pct}%` }}
+        />
       </div>
     </div>
-  )
+  );
 }
 
 function getGreeting() {
-  const h = new Date().getHours()
-  if (h < 12) return 'morning'
-  if (h < 17) return 'afternoon'
-  return 'evening'
+  const h = new Date().getHours();
+  if (h < 12) return "morning";
+  if (h < 17) return "afternoon";
+  return "evening";
 }
