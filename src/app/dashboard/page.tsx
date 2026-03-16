@@ -77,7 +77,9 @@ export default function DashboardPage() {
   async function loadData() {
     setLoading(true);
     const userId = user!.id;
-
+    const [weekStats, setWeekStats] = useState<
+      { date: string; calories: number; logged: boolean; workouts: number }[]
+    >([]);
     const [{ data: profileData }, { data: foodData }, { data: workoutData }] =
       await Promise.all([
         supabase.from("profiles").select("*").eq("id", userId).single(),
@@ -92,6 +94,49 @@ export default function DashboardPage() {
           .eq("user_id", userId)
           .eq("log_date", today),
       ]);
+
+    // Get last 7 days of food + workout logs
+    const weekStart = format(subDays(new Date(), 6), "yyyy-MM-dd");
+    const [{ data: weekFood }, { data: weekWorkouts }] = await Promise.all([
+      supabase
+        .from("food_logs")
+        .select("log_date, calories")
+        .eq("user_id", userId)
+        .gte("log_date", weekStart)
+        .lte("log_date", today),
+      supabase
+        .from("workout_logs")
+        .select("log_date")
+        .eq("user_id", userId)
+        .gte("log_date", weekStart)
+        .lte("log_date", today),
+    ]);
+
+    // Build a map of the last 7 days
+    const map = new Map<
+      string,
+      { calories: number; logged: boolean; workouts: number }
+    >();
+    for (let i = 6; i >= 0; i--) {
+      const d = format(subDays(new Date(), i), "yyyy-MM-dd");
+      map.set(d, { calories: 0, logged: false, workouts: 0 });
+    }
+    weekFood?.forEach(({ log_date, calories }) => {
+      const e = map.get(log_date);
+      if (e)
+        map.set(log_date, {
+          ...e,
+          calories: e.calories + calories,
+          logged: true,
+        });
+    });
+    weekWorkouts?.forEach(({ log_date }) => {
+      const e = map.get(log_date);
+      if (e) map.set(log_date, { ...e, workouts: e.workouts + 1 });
+    });
+    setWeekStats(
+      Array.from(map.entries()).map(([date, v]) => ({ date, ...v })),
+    );
 
     if (profileData && profileData.height_cm) {
       setProfile(profileData);
@@ -368,88 +413,114 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* AI Plan */}
-      {loading ? (
-        <div className="card space-y-3">
-          <div className="skeleton h-4 w-40" />
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="skeleton h-20 rounded-xl" />
-            ))}
-          </div>
+      {/* Weekly Summary */}
+      <div className="card">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-base">📊</span>
+          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+            This week at a glance
+          </h2>
         </div>
-      ) : plan ? (
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-              Today's plan
-            </h2>
-            {plan.tip && (
-              <p className="text-xs text-gray-400 italic max-w-xs text-right">
-                {plan.tip}
-              </p>
-            )}
+
+        {loading ? (
+          <div className="space-y-3">
+            <div className="skeleton h-4 w-48" />
+            <div className="skeleton h-16" />
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {Object.entries(plan.meals).map(([key, meal]) => (
-              <div
-                key={key}
-                className={`rounded-xl border p-3 ${MEAL_COLORS[key] || "bg-gray-50 border-gray-200"}`}
-              >
-                <div className="text-lg mb-1">{MEAL_ICONS[key] || "🍽️"}</div>
-                <div className="text-xs font-semibold text-gray-700 capitalize">
-                  {key}
-                </div>
-                <div className="text-xs text-gray-600 mt-0.5 font-medium">
-                  {meal.name}
-                </div>
-                <div className="text-xs text-gray-400 mt-0.5">
-                  {meal.calories} kcal
-                </div>
-                {meal.description && (
-                  <div className="text-xs text-gray-400 mt-1 leading-relaxed">
-                    {meal.description}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-          {plan.workout && (
-            <div className="mt-3 pt-3 border-t border-gray-100 flex items-start gap-3">
-              <span className="text-xl">🏋️</span>
-              <div>
-                <div className="text-xs font-semibold text-gray-700">
-                  {plan.workout.name}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {plan.workout.duration_minutes} min ·{" "}
-                  {plan.workout.calories_burned} kcal
-                </div>
-                {plan.workout.description && (
-                  <div className="text-xs text-gray-400 mt-0.5">
-                    {plan.workout.description}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      ) : // AFTER — only shows when profile is genuinely incomplete
-      !profile || !(profile as any).height_cm ? (
-        <div className="card text-center py-8">
-          <span className="text-3xl mb-3 block">👋</span>
-          <p className="text-gray-500 text-sm">
-            <a href="/profile" className="text-sky-600 hover:underline">
-              Set up your profile
-            </a>{" "}
-            to get a personalized plan.
+        ) : weekStats.length === 0 ? (
+          <p className="text-sm text-gray-400 italic">
+            No data yet — start logging to see your weekly progress.
           </p>
-        </div>
-      ) : (
-        <div className="card text-center py-6">
-          <p className="text-gray-400 text-sm">Generating your AI plan...</p>
-        </div>
-      )}
+        ) : (
+          <>
+            {/* Stat pills */}
+            {(() => {
+              const loggedDays = weekStats.filter((d) => d.logged).length;
+              const avgCals =
+                loggedDays > 0
+                  ? Math.round(
+                      weekStats
+                        .filter((d) => d.logged)
+                        .reduce((s, d) => s + d.calories, 0) / loggedDays,
+                    )
+                  : 0;
+              const totalWorkouts = weekStats.reduce(
+                (s, d) => s + d.workouts,
+                0,
+              );
+              const streak = (() => {
+                let count = 0;
+                for (let i = weekStats.length - 1; i >= 0; i--) {
+                  if (weekStats[i].logged) count++;
+                  else break;
+                }
+                return count;
+              })();
+              return (
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="bg-sky-50 border border-sky-100 rounded-xl p-3 text-center">
+                    <div className="text-xl font-semibold text-sky-700">
+                      {loggedDays}
+                      <span className="text-sm font-normal">/7</span>
+                    </div>
+                    <div className="text-xs text-sky-500 mt-0.5">
+                      Days logged
+                    </div>
+                  </div>
+                  <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-center">
+                    <div className="text-xl font-semibold text-amber-700">
+                      {avgCals > 0 ? avgCals.toLocaleString() : "—"}
+                    </div>
+                    <div className="text-xs text-amber-500 mt-0.5">
+                      Avg kcal/day
+                    </div>
+                  </div>
+                  <div className="bg-green-50 border border-green-100 rounded-xl p-3 text-center">
+                    <div className="text-xl font-semibold text-green-700">
+                      {totalWorkouts}
+                    </div>
+                    <div className="text-xs text-green-500 mt-0.5">
+                      Workouts
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Day bar strip */}
+            <div className="grid grid-cols-7 gap-1">
+              {weekStats.map(({ date, calories, logged, workouts }) => {
+                const pct =
+                  logged && calTarget > 0
+                    ? Math.min(100, Math.round((calories / calTarget) * 100))
+                    : 0;
+                const dayLabel = format(new Date(date + "T00:00:00"), "EEE");
+                const isToday = date === today;
+                return (
+                  <div key={date} className="flex flex-col items-center gap-1">
+                    <div className="text-xs text-gray-400">{dayLabel}</div>
+                    <div className="w-full h-16 bg-gray-100 rounded-lg relative overflow-hidden">
+                      {logged && (
+                        <div
+                          className="absolute bottom-0 left-0 right-0 bg-sky-400 rounded-lg transition-all"
+                          style={{ height: `${pct}%` }}
+                        />
+                      )}
+                    </div>
+                    {workouts > 0 && <div className="text-xs">🏃</div>}
+                    {isToday && (
+                      <div className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-xs text-gray-400 mt-2">
+              Bar height = % of your daily calorie goal
+            </p>
+          </>
+        )}
+      </div>
 
       {/* Quick links */}
       <div className="grid grid-cols-2 gap-4">
