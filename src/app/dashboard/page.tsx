@@ -49,6 +49,7 @@ const MEAL_COLORS: Record<string, string> = {
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const [weekLoading, setWeekLoading] = useState(true)
   const [plan, setPlan] = useState<Plan | null>(null);
   const [weekStats, setWeekStats] = useState<{ date: string; calories: number; logged: boolean; workouts: number }[]>([])
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
@@ -97,6 +98,7 @@ export default function DashboardPage() {
       ]);
 
     // Get last 7 days of food + workout logs
+    setWeekLoading(true)
     const weekStart = format(subDays(new Date(), 6), "yyyy-MM-dd");
     const [{ data: weekFood }, { data: weekWorkouts }] = await Promise.all([
       supabase
@@ -138,6 +140,7 @@ export default function DashboardPage() {
     setWeekStats(
       Array.from(map.entries()).map(([date, v]) => ({ date, ...v })),
     );
+    setWeekLoading(false) 
 
     if (profileData && profileData.height_cm) {
       setProfile(profileData);
@@ -423,7 +426,7 @@ export default function DashboardPage() {
           </h2>
         </div>
 
-        {loading ? (
+        {weekLoading ? (
           <div className="space-y-3">
             <div className="skeleton h-4 w-48" />
             <div className="skeleton h-16" />
