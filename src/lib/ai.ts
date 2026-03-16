@@ -15,7 +15,7 @@ async function callAnthropic(system: string, messages: AIMessage[]): Promise<str
 async function callGemini(system: string, messages: AIMessage[]): Promise<string> {
   const fullPrompt = system + '\n\n' + messages.map(m => `${m.role}: ${m.content}`).join('\n')
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
