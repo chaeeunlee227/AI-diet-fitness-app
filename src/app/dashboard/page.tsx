@@ -102,16 +102,20 @@ export default function DashboardPage() {
       await calculateStreak(userId);
 
       // Generate AI plan
-      const res = await fetch("/api/ai", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "generate_plan",
-          data: { profile: profileData },
-        }),
-      });
-      const { data: planData } = await res.json();
-      setPlan(planData);
+      try {
+        const res = await fetch("/api/ai", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "generate_plan",
+            data: { profile: profileData },
+          }),
+        });
+        const { data: planData } = await res.json();
+        if (planData?.meals) setPlan(planData);
+      } catch {
+        // Plan generation failed silently — rest of dashboard still loads fine
+      }
 
       // Get AI feedback if there are logs
       if (foodData && foodData.length > 0) {
@@ -430,15 +434,20 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
-      ) : (
+      ) : // AFTER — only shows when profile is genuinely incomplete
+      !profile || !(profile as any).height_cm ? (
         <div className="card text-center py-8">
-          <div className="text-3xl mb-2">👋</div>
-          <p className="text-sm text-gray-500">
+          <span className="text-3xl mb-3 block">👋</span>
+          <p className="text-gray-500 text-sm">
             <a href="/profile" className="text-sky-600 hover:underline">
               Set up your profile
             </a>{" "}
             to get a personalized plan.
           </p>
+        </div>
+      ) : (
+        <div className="card text-center py-6">
+          <p className="text-gray-400 text-sm">Generating your AI plan...</p>
         </div>
       )}
 
