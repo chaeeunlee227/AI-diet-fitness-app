@@ -59,7 +59,11 @@ const MEAL_CONFIG: {
 export default function LogPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  function getLocalToday() {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  }
+  const [date, setDate] = useState(getLocalToday());
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
   const [addingMeal, setAddingMeal] = useState<MealType | null>(null);

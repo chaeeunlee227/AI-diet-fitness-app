@@ -49,9 +49,11 @@ const MEAL_COLORS: Record<string, string> = {
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [weekLoading, setWeekLoading] = useState(true)
+  const [weekLoading, setWeekLoading] = useState(true);
   const [plan, setPlan] = useState<Plan | null>(null);
-  const [weekStats, setWeekStats] = useState<{ date: string; calories: number; logged: boolean; workouts: number }[]>([])
+  const [weekStats, setWeekStats] = useState<
+    { date: string; calories: number; logged: boolean; workouts: number }[]
+  >([]);
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
   const [feedback, setFeedback] = useState("");
@@ -67,8 +69,12 @@ export default function DashboardPage() {
     sex: string;
     activity_level: string;
   } | null>(null);
-  const today = format(new Date(), "yyyy-MM-dd");
 
+  function getLocalToday() {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  }
+  const today = getLocalToday();
   useEffect(() => {
     if (!authLoading && !user) router.push("/login");
   }, [user, authLoading]);
@@ -89,16 +95,16 @@ export default function DashboardPage() {
           .from("food_logs")
           .select("*")
           .eq("user_id", userId)
-          .eq("log_date", today),
+          .eq("log_date", getLocalToday()),
         supabase
           .from("workout_logs")
           .select("*")
           .eq("user_id", userId)
-          .eq("log_date", today),
+          .eq("log_date", getLocalToday()),
       ]);
 
     // Get last 7 days of food + workout logs
-    setWeekLoading(true)
+    setWeekLoading(true);
     const weekStart = format(subDays(new Date(), 6), "yyyy-MM-dd");
     const [{ data: weekFood }, { data: weekWorkouts }] = await Promise.all([
       supabase
@@ -106,13 +112,13 @@ export default function DashboardPage() {
         .select("log_date, calories")
         .eq("user_id", userId)
         .gte("log_date", weekStart)
-        .lte("log_date", today),
+        .lte("log_date", getLocalToday()),
       supabase
         .from("workout_logs")
         .select("log_date")
         .eq("user_id", userId)
         .gte("log_date", weekStart)
-        .lte("log_date", today),
+        .lte("log_date", getLocalToday()),
     ]);
 
     // Build a map of the last 7 days
@@ -140,7 +146,7 @@ export default function DashboardPage() {
     setWeekStats(
       Array.from(map.entries()).map(([date, v]) => ({ date, ...v })),
     );
-    setWeekLoading(false) 
+    setWeekLoading(false);
 
     if (profileData && profileData.height_cm) {
       setProfile(profileData);

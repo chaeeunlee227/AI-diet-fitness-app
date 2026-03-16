@@ -114,7 +114,7 @@ export default function CalendarPage() {
               const s = summaries.get(key)
               const isCurrentMonth = day.getMonth() === current.getMonth()
               const isSel = selected === key
-              const isT = isToday(day)
+              const isT = format(day, 'yyyy-MM-dd') === getLocalToday()
 
               return (
                 <button
@@ -230,4 +230,9 @@ function StatCard({ label, value, icon }: { label: string; value: string; icon: 
       <div className="text-xs text-gray-500 mt-0.5">{label}</div>
     </div>
   )
+}
+
+function getLocalToday() {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 }
