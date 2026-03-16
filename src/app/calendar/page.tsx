@@ -104,7 +104,7 @@ export default function CalendarPage() {
           <button onClick={() => setCurrent(d => new Date(d.getFullYear(), d.getMonth() + 1))}
             className="w-8 h-8 border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center justify-center text-gray-600">›</button>
           <button onClick={() => setCurrent(new Date())}
-            className="ml-1 text-xs text-sky-600 hover:underline px-2 py-1">Today</button>
+            className="ml-1 text-xs text-sky-600 hover:underline hover:bg-sky-400 hover:text-gray-600 px-2 py-1">Today</button>
         </div>
       </div>
 
