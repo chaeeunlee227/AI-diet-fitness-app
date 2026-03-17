@@ -1,9 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-// Must be async — Next.js 15 cookies() is a Promise
 export async function createSupabaseServerClient() {
-  const cookieStore = await cookies()
+  const cookieStore = await cookies()  // ← await here
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,7 +18,7 @@ export async function createSupabaseServerClient() {
               cookieStore.set(name, value, options)
             })
           } catch {
-            // Safe to ignore when called from a Server Component
+            // Safe to ignore in Server Components
           }
         },
       },
