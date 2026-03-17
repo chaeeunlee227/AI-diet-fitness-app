@@ -3,12 +3,10 @@ import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
-type Mode = 'signin' | 'signup'
-
 export default function LoginPage() {
-  const [mode, setMode] = useState<Mode>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [isSignUp, setIsSignUp] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
@@ -18,47 +16,43 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
 
-    if (mode === 'signup') {
+    if (isSignUp) {
+      // New user — sign up then send to onboarding
       const { error } = await supabase.auth.signUp({ email, password })
-      if (error) { setError(error.message) } else { router.replace('/dashboard') }
+      if (error) {
+        setError(error.message)
+      } else {
+        router.push('/onboarding')  // ← new users go to onboarding
+      }
     } else {
+      // Existing user — sign in then check profile completeness
       const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) { setError(error.message) } else { router.replace('/dashboard') }
+      if (error) {
+        setError(error.message)
+      } else {
+        router.push('/auth/check')  // ← returning users go through check
+      }
     }
+
     setLoading(false)
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-green-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm">
-
-        {/* Logo */}
         <div className="text-center mb-8">
-          <div className="text-6xl mb-3">🥗</div>
-          <h1 className="text-3xl font-black text-green-900">
-            Healt<span className="text-green-500">HI</span>
-          </h1>
-          <p className="text-sm text-green-600 mt-1 font-semibold">Your AI Health Companion</p>
+          <div className="text-5xl mb-3">🥗</div>
+          <h1 className="text-2xl font-semibold text-gray-900">HealthTrack</h1>
+          <p className="text-sm text-gray-500 mt-1">AI-powered diet & fitness tracker</p>
         </div>
 
-        <div className="bg-white rounded-3xl border border-green-100 p-6 shadow-green">
-
-          {/* Mode toggle */}
-          <div className="flex rounded-2xl bg-green-50 border border-green-100 p-1 mb-5 gap-1">
-            {(['signin', 'signup'] as Mode[]).map(m => (
-              <button
-                key={m}
-                onClick={() => { setMode(m); setError('') }}
-                className={`flex-1 py-2 rounded-xl text-sm font-black transition-all ${
-                  mode === m
-                    ? 'bg-white shadow text-green-900 border border-green-100'
-                    : 'text-green-600 hover:text-green-800'
-                }`}
-              >
-                {m === 'signin' ? 'Sign in' : 'Create account'}
-              </button>
-            ))}
-          </div>
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900 mb-1">
+            {isSignUp ? 'Create account' : 'Sign in'}
+          </h2>
+          <p className="text-sm text-gray-500 mb-5">
+            {isSignUp ? 'Start tracking your health today.' : 'Welcome back!'}
+          </p>
 
           <form onSubmit={handleSubmit} className="space-y-3">
             <input
@@ -68,33 +62,43 @@ export default function LoginPage() {
               placeholder="your@email.com"
               required
               autoFocus
-              className="field-input"
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-sky-400"
             />
             <input
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              placeholder={mode === 'signup' ? 'Create a password' : 'Your password'}
+              placeholder="Password"
               required
               minLength={6}
-              className="field-input"
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-sky-400"
             />
-
-            {error && <p className="msg-error">{error}</p>}
-
+            {error && (
+              <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                {error}
+              </p>
+            )}
             <button
               type="submit"
               disabled={loading || !email || !password}
-              className="btn-primary w-full justify-center py-3 text-sm rounded-2xl"
+              className="w-full py-3 bg-sky-500 hover:bg-sky-600 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-colors"
             >
-              {loading
-                ? 'Please wait…'
-                : mode === 'signin' ? 'Sign in →' : 'Create account →'}
+              {loading ? 'Please wait...' : isSignUp ? 'Create account →' : 'Sign in →'}
             </button>
           </form>
+
+          <p className="text-xs text-center text-gray-400 mt-4">
+            {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
+            <button
+              onClick={() => { setIsSignUp(!isSignUp); setError('') }}
+              className="text-sky-600 hover:underline"
+            >
+              {isSignUp ? 'Sign in' : 'Sign up'}
+            </button>
+          </p>
         </div>
 
-        <p className="text-xs text-center text-green-400 mt-6 font-semibold">
+        <p className="text-xs text-center text-gray-400 mt-6">
           Your data is stored securely in Supabase.
         </p>
       </div>
