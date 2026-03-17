@@ -102,25 +102,25 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-[#f0faf4] py-10 px-4">
-      <div className="max-w-xl mx-auto space-y-6">
+      <div className="max-w-xl mx-auto space-y-5">
 
         {/* Header */}
-        <div className="text-center">
+        <div className="text-center mb-2">
           <div className="text-4xl mb-2">🥗</div>
-          <h1 className="text-2xl font-semibold text-gray-900">Welcome to HealtHI!</h1>
-          <p className="text-sm text-gray-500 mt-1">Let's set up your profile to personalize your experience.</p>
+          <h1 className="text-3xl font-extrabold text-green-700">Welcome to HealtHI!</h1>
+          <p className="text-sm font-semibold text-green-500 mt-1">Let's set up your profile to personalize your experience 🌱</p>
         </div>
 
         {/* Goal */}
-        <div className="card">
-          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Your goal</h2>
+        <div className="bg-white rounded-3xl border border-green-100 p-5 shadow-sm">
+          <h2 className="text-sm font-extrabold text-gray-600 uppercase tracking-wide mb-3">Your goal</h2>
           <div className="flex flex-wrap gap-2">
             {GOALS.map(g => (
               <button key={g.value} onClick={() => setForm(p => ({ ...p, goal: g.value }))}
-                className={`px-4 py-2 rounded-xl border text-sm font-medium transition-colors ${
+                className={`px-4 py-2 rounded-2xl border-2 text-sm font-bold transition-colors ${
                   form.goal === g.value
                     ? 'bg-green-600 border-green-600 text-white'
-                    : 'border-green-200 text-gray-700 hover:border-green-400'
+                    : 'border-green-200 text-gray-600 hover:border-green-400'
                 }`}>
                 {g.label}
               </button>
@@ -129,8 +129,8 @@ export default function OnboardingPage() {
         </div>
 
         {/* Body stats */}
-        <div className="card">
-          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Body stats</h2>
+        <div className="bg-white rounded-3xl border border-green-100 p-5 shadow-sm">
+          <h2 className="text-sm font-extrabold text-gray-600 uppercase tracking-wide mb-3">Body stats</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
               { label: 'Height (cm)', key: 'height_cm', placeholder: '175' },
@@ -138,15 +138,17 @@ export default function OnboardingPage() {
               { label: 'Age', key: 'age', placeholder: '28' },
             ].map(f => (
               <div key={f.key}>
-                <label className="block text-sm text-gray-600 mb-1">{f.label}</label>
+                <label className="block text-xs font-bold text-gray-500 mb-1">{f.label}</label>
                 <input type="number" value={(form as any)[f.key]}
                   onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
-                  placeholder={f.placeholder} className="field-input" />
+                  placeholder={f.placeholder}
+                  className="w-full px-3 py-2.5 border-2 border-green-100 rounded-2xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400 placeholder:font-normal" />
               </div>
             ))}
             <div>
-              <label className="block text-sm text-gray-600 mb-1">Sex</label>
-              <select value={form.sex} onChange={e => setForm(p => ({ ...p, sex: e.target.value }))} className="field-input">
+              <label className="block text-xs font-bold text-gray-500 mb-1">Sex</label>
+              <select value={form.sex} onChange={e => setForm(p => ({ ...p, sex: e.target.value }))}
+                className="w-full px-3 py-2.5 border-2 border-green-100 rounded-2xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400">
                 <option value="male">Male</option>
                 <option value="female">Female</option>
                 <option value="other">Other</option>
@@ -156,33 +158,33 @@ export default function OnboardingPage() {
         </div>
 
         {/* Activity level */}
-        <div className="card">
-          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Activity level</h2>
+        <div className="bg-white rounded-3xl border border-green-100 p-5 shadow-sm">
+          <h2 className="text-sm font-extrabold text-gray-600 uppercase tracking-wide mb-3">Activity level</h2>
           <div className="grid grid-cols-2 gap-2">
             {ACTIVITY_LEVELS.map(al => (
               <button key={al.value} onClick={() => setForm(p => ({ ...p, activity_level: al.value }))}
-                className={`text-left px-3 py-2 rounded-xl border text-xs transition-colors ${
+                className={`text-left px-4 py-3 rounded-2xl border-2 transition-colors ${
                   form.activity_level === al.value
                     ? 'bg-green-600 border-green-600 text-white'
-                    : 'border-green-200 text-gray-700 hover:border-green-400'
+                    : 'border-green-200 text-gray-600 hover:border-green-400'
                 }`}>
-                <div className="font-medium">{al.label}</div>
-                <div className="opacity-75">{al.desc}</div>
+                <div className="text-sm font-bold">{al.label}</div>
+                <div className="text-xs font-medium opacity-75">{al.desc}</div>
               </button>
             ))}
           </div>
         </div>
 
         {/* Diet preferences */}
-        <div className="card">
-          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Diet preferences</h2>
+        <div className="bg-white rounded-3xl border border-green-100 p-5 shadow-sm">
+          <h2 className="text-sm font-extrabold text-gray-600 uppercase tracking-wide mb-3">Diet preferences</h2>
           <div className="flex flex-wrap gap-2">
             {DIET_PREFS.map(p => (
               <button key={p} onClick={() => toggleArr('diet_preferences', p)}
-                className={`px-3 py-1.5 rounded-xl border text-sm transition-colors ${
+                className={`px-3 py-1.5 rounded-2xl border-2 text-sm font-bold transition-colors ${
                   form.diet_preferences.includes(p)
                     ? 'bg-green-600 border-green-600 text-white'
-                    : 'border-green-200 text-gray-700 hover:border-green-400'
+                    : 'border-green-200 text-gray-600 hover:border-green-400'
                 }`}>
                 {p}
               </button>
@@ -191,15 +193,15 @@ export default function OnboardingPage() {
         </div>
 
         {/* Workout preferences */}
-        <div className="card">
-          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Workout preferences</h2>
+        <div className="bg-white rounded-3xl border border-green-100 p-5 shadow-sm">
+          <h2 className="text-sm font-extrabold text-gray-600 uppercase tracking-wide mb-3">Workout preferences</h2>
           <div className="flex flex-wrap gap-2">
             {WORKOUT_PREFS.map(p => (
               <button key={p} onClick={() => toggleArr('workout_preferences', p)}
-                className={`px-3 py-1.5 rounded-xl border text-sm transition-colors ${
+                className={`px-3 py-1.5 rounded-2xl border-2 text-sm font-bold transition-colors ${
                   form.workout_preferences.includes(p)
                     ? 'bg-green-600 border-green-600 text-white'
-                    : 'border-green-200 text-gray-700 hover:border-green-400'
+                    : 'border-green-200 text-gray-600 hover:border-green-400'
                 }`}>
                 {p}
               </button>
@@ -208,11 +210,11 @@ export default function OnboardingPage() {
         </div>
 
         {error && (
-          <p className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-xl px-4 py-2">{error}</p>
+          <p className="text-xs font-semibold text-red-500 bg-red-50 border border-red-200 rounded-2xl px-4 py-2">{error}</p>
         )}
 
         <button onClick={handleSave} disabled={saving}
-          className="w-full py-3 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition-colors">
+          className="w-full py-3.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-2xl text-sm font-extrabold transition-colors shadow-sm">
           {saving ? 'Saving...' : '✦ Get started →'}
         </button>
 

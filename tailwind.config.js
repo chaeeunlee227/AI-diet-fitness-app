@@ -5,30 +5,20 @@ module.exports = {
     extend: {
       colors: {
         brand: {
-          50:  '#f0faf4',
-          100: '#eaf7ef',
-          200: '#dcf2e6',
-          300: '#b6dfc8',
-          400: '#4caf7d',
-          500: '#2e9e5b',
-          600: '#1e8a52',
-          700: '#1b5e35',
-          800: '#144d2a',
-          900: '#0f3d20',
-        },
+          50: '#f0fdf4',
+          100: '#dcfce7',
+          500: '#22c55e',
+          600: '#16a34a',
+          700: '#15803d',
+        }
       },
       fontFamily: {
-        sans: ['Nunito', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        sans: ['Nunito', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
-        xl:  '12px',
-        '2xl': '16px',
-        '3xl': '20px',
-      },
-      boxShadow: {
-        green: '0 4px 14px rgba(46, 158, 91, 0.28)',
-        'green-lg': '0 6px 24px rgba(46, 158, 91, 0.22)',
-      },
+        '2xl': '1rem',
+        '3xl': '1.5rem',
+      }
     },
   },
   plugins: [],

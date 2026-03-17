@@ -42,16 +42,16 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="text-5xl mb-3">🥗</div>
-          <h1 className="text-2xl font-semibold text-gray-900">HealtHI</h1>
-          <p className="text-sm text-gray-500 mt-1">AI-powered diet & fitness tracker</p>
+          <h1 className="text-3xl font-extrabold text-green-700">HealtHI</h1>
+          <p className="text-sm font-semibold text-green-500 mt-1">AI-powered diet & fitness tracker</p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-green-100 p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">
-            {isSignUp ? 'Create account' : 'Sign in'}
+        <div className="bg-white rounded-3xl border border-green-100 p-7 shadow-sm">
+          <h2 className="text-xl font-extrabold text-gray-800 mb-1">
+            {isSignUp ? 'Create account' : 'Welcome back!'}
           </h2>
-          <p className="text-sm text-gray-500 mb-5">
-            {isSignUp ? 'Start tracking your health today.' : 'Welcome back!'}
+          <p className="text-sm font-medium text-gray-400 mb-6">
+            {isSignUp ? 'Start your health journey today 🌱' : 'Sign in to continue 👋'}
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-3">
@@ -62,7 +62,7 @@ export default function LoginPage() {
               placeholder="your@email.com"
               required
               autoFocus
-              className="w-full px-4 py-3 border border-green-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400"
+              className="w-full px-4 py-3 border-2 border-green-100 rounded-2xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400 placeholder:font-normal"
             />
             <input
               type="password"
@@ -71,34 +71,34 @@ export default function LoginPage() {
               placeholder="Password"
               required
               minLength={6}
-              className="w-full px-4 py-3 border border-green-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400"
+              className="w-full px-4 py-3 border-2 border-green-100 rounded-2xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400 placeholder:font-normal"
             />
             {error && (
-              <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              <p className="text-xs font-semibold text-red-500 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
                 {error}
               </p>
             )}
             <button
               type="submit"
               disabled={loading || !email || !password}
-              className="w-full py-3 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-colors"
+              className="w-full py-3 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-2xl text-sm font-bold transition-colors"
             >
               {loading ? 'Please wait...' : isSignUp ? 'Create account →' : 'Sign in →'}
             </button>
           </form>
 
-          <p className="text-xs text-center text-gray-400 mt-4">
+          <p className="text-xs font-semibold text-center text-gray-400 mt-5">
             {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
             <button
               onClick={() => { setIsSignUp(!isSignUp); setError('') }}
-              className="text-green-600 hover:underline"
+              className="text-green-600 hover:underline font-bold"
             >
               {isSignUp ? 'Sign in' : 'Sign up'}
             </button>
           </p>
         </div>
 
-        <p className="text-xs text-center text-gray-400 mt-6">
+        <p className="text-xs font-medium text-center text-gray-400 mt-6">
           Your data is stored securely in Supabase.
         </p>
       </div>
