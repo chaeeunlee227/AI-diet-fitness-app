@@ -20,53 +20,44 @@ export default function LoginPage() {
 
     if (mode === 'signup') {
       const { error } = await supabase.auth.signUp({ email, password })
-      if (error) {
-        setError(error.message)
-      } else {
-        // Signed up — Supabase auto-signs them in, push to dashboard
-        router.replace('/dashboard')
-      }
+      if (error) { setError(error.message) } else { router.replace('/dashboard') }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) {
-        setError(error.message)
-      } else {
-        router.replace('/dashboard')
-      }
+      if (error) { setError(error.message) } else { router.replace('/dashboard') }
     }
-
     setLoading(false)
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-green-50 px-4">
       <div className="w-full max-w-sm">
+
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="text-5xl mb-3">🥗</div>
-          <h1 className="text-2xl font-semibold text-gray-900">HealthTrack</h1>
-          <p className="text-sm text-gray-500 mt-1">AI-powered diet & fitness tracker</p>
+          <div className="text-6xl mb-3">🥗</div>
+          <h1 className="text-3xl font-black text-green-900">
+            Healt<span className="text-green-500">HI</span>
+          </h1>
+          <p className="text-sm text-green-600 mt-1 font-semibold">Your AI Health Companion</p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+        <div className="bg-white rounded-3xl border border-green-100 p-6 shadow-green">
+
           {/* Mode toggle */}
-          <div className="flex rounded-xl bg-gray-100 p-1 mb-5">
-            <button
-              onClick={() => { setMode('signin'); setError('') }}
-              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-                mode === 'signin' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'
-              }`}
-            >
-              Sign in
-            </button>
-            <button
-              onClick={() => { setMode('signup'); setError('') }}
-              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-                mode === 'signup' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'
-              }`}
-            >
-              Create account
-            </button>
+          <div className="flex rounded-2xl bg-green-50 border border-green-100 p-1 mb-5 gap-1">
+            {(['signin', 'signup'] as Mode[]).map(m => (
+              <button
+                key={m}
+                onClick={() => { setMode(m); setError('') }}
+                className={`flex-1 py-2 rounded-xl text-sm font-black transition-all ${
+                  mode === m
+                    ? 'bg-white shadow text-green-900 border border-green-100'
+                    : 'text-green-600 hover:text-green-800'
+                }`}
+              >
+                {m === 'signin' ? 'Sign in' : 'Create account'}
+              </button>
+            ))}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-3">
@@ -77,7 +68,7 @@ export default function LoginPage() {
               placeholder="your@email.com"
               required
               autoFocus
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-sky-400"
+              className="field-input"
             />
             <input
               type="password"
@@ -86,19 +77,15 @@ export default function LoginPage() {
               placeholder={mode === 'signup' ? 'Create a password' : 'Your password'}
               required
               minLength={6}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-sky-400"
+              className="field-input"
             />
 
-            {error && (
-              <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                {error}
-              </p>
-            )}
+            {error && <p className="msg-error">{error}</p>}
 
             <button
               type="submit"
               disabled={loading || !email || !password}
-              className="w-full py-3 bg-sky-500 hover:bg-sky-600 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-colors"
+              className="btn-primary w-full justify-center py-3 text-sm rounded-2xl"
             >
               {loading
                 ? 'Please wait…'
@@ -107,7 +94,7 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <p className="text-xs text-center text-gray-400 mt-6">
+        <p className="text-xs text-center text-green-400 mt-6 font-semibold">
           Your data is stored securely in Supabase.
         </p>
       </div>
