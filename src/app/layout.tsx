@@ -8,12 +8,16 @@ export const metadata: Metadata = {
   description: 'Track meals, workouts, and get AI-powered health insights',
   icons: {
     icon: '/healthi-logo.svg',
+    apple: '/apple-touch-icon.png',
   },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+      </head>
       <body>
         <AuthProvider>
           <div className="min-h-screen flex flex-col">
