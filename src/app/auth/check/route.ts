@@ -3,7 +3,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 export async function GET(request: NextRequest) {
   const { origin } = new URL(request.url)
-  const supabase = await createSupabaseServerClient()
+  const supabase = createSupabaseServerClient()
 
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -13,12 +13,12 @@ export async function GET(request: NextRequest) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('height_cm')
+    .select('height_cm')   // ← check for filled-in profile, not just row existence
     .eq('id', user.id)
     .single()
 
   if (!profile?.height_cm) {
-    return NextResponse.redirect(`${origin}/onboard`)
+    return NextResponse.redirect(`${origin}/onboarding`)  // ← new user
   }
 
   return NextResponse.redirect(`${origin}/dashboard`)

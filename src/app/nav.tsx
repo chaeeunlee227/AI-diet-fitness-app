@@ -9,7 +9,7 @@ export function Nav() {
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
 
-  if (pathname === '/login') return null
+  if (pathname === '/login' || pathname === '/onboarding') return null
 
   async function handleSignOut() {
     await signOut()
