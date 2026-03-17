@@ -101,12 +101,13 @@ export default function OnboardingPage() {
   if (authLoading) return null
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4">
+    <div className="min-h-screen bg-[#f0faf4] py-10 px-4">
       <div className="max-w-xl mx-auto space-y-6">
+
         {/* Header */}
         <div className="text-center">
           <div className="text-4xl mb-2">🥗</div>
-          <h1 className="text-2xl font-semibold text-gray-900">Welcome to HealthTrack!</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">Welcome to HealtHI!</h1>
           <p className="text-sm text-gray-500 mt-1">Let's set up your profile to personalize your experience.</p>
         </div>
 
@@ -116,7 +117,11 @@ export default function OnboardingPage() {
           <div className="flex flex-wrap gap-2">
             {GOALS.map(g => (
               <button key={g.value} onClick={() => setForm(p => ({ ...p, goal: g.value }))}
-                className={`px-4 py-2 rounded-xl border text-sm font-medium transition-colors ${form.goal === g.value ? 'bg-sky-500 border-sky-500 text-white' : 'border-gray-200 text-gray-700 hover:border-sky-300'}`}>
+                className={`px-4 py-2 rounded-xl border text-sm font-medium transition-colors ${
+                  form.goal === g.value
+                    ? 'bg-green-600 border-green-600 text-white'
+                    : 'border-green-200 text-gray-700 hover:border-green-400'
+                }`}>
                 {g.label}
               </button>
             ))}
@@ -156,7 +161,11 @@ export default function OnboardingPage() {
           <div className="grid grid-cols-2 gap-2">
             {ACTIVITY_LEVELS.map(al => (
               <button key={al.value} onClick={() => setForm(p => ({ ...p, activity_level: al.value }))}
-                className={`text-left px-3 py-2 rounded-xl border text-xs transition-colors ${form.activity_level === al.value ? 'bg-sky-500 border-sky-500 text-white' : 'border-gray-200 text-gray-700 hover:border-sky-300'}`}>
+                className={`text-left px-3 py-2 rounded-xl border text-xs transition-colors ${
+                  form.activity_level === al.value
+                    ? 'bg-green-600 border-green-600 text-white'
+                    : 'border-green-200 text-gray-700 hover:border-green-400'
+                }`}>
                 <div className="font-medium">{al.label}</div>
                 <div className="opacity-75">{al.desc}</div>
               </button>
@@ -170,7 +179,11 @@ export default function OnboardingPage() {
           <div className="flex flex-wrap gap-2">
             {DIET_PREFS.map(p => (
               <button key={p} onClick={() => toggleArr('diet_preferences', p)}
-                className={`px-3 py-1.5 rounded-xl border text-sm transition-colors ${form.diet_preferences.includes(p) ? 'bg-sky-500 border-sky-500 text-white' : 'border-gray-200 text-gray-700 hover:border-sky-300'}`}>
+                className={`px-3 py-1.5 rounded-xl border text-sm transition-colors ${
+                  form.diet_preferences.includes(p)
+                    ? 'bg-green-600 border-green-600 text-white'
+                    : 'border-green-200 text-gray-700 hover:border-green-400'
+                }`}>
                 {p}
               </button>
             ))}
@@ -183,19 +196,26 @@ export default function OnboardingPage() {
           <div className="flex flex-wrap gap-2">
             {WORKOUT_PREFS.map(p => (
               <button key={p} onClick={() => toggleArr('workout_preferences', p)}
-                className={`px-3 py-1.5 rounded-xl border text-sm transition-colors ${form.workout_preferences.includes(p) ? 'bg-sky-500 border-sky-500 text-white' : 'border-gray-200 text-gray-700 hover:border-sky-300'}`}>
+                className={`px-3 py-1.5 rounded-xl border text-sm transition-colors ${
+                  form.workout_preferences.includes(p)
+                    ? 'bg-green-600 border-green-600 text-white'
+                    : 'border-green-200 text-gray-700 hover:border-green-400'
+                }`}>
                 {p}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Submit */}
-        {error && <p className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-xl px-4 py-2">{error}</p>}
+        {error && (
+          <p className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-xl px-4 py-2">{error}</p>
+        )}
+
         <button onClick={handleSave} disabled={saving}
-          className="w-full py-3 bg-sky-500 hover:bg-sky-600 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition-colors">
+          className="w-full py-3 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition-colors">
           {saving ? 'Saving...' : '✦ Get started →'}
         </button>
+
       </div>
     </div>
   )

@@ -17,20 +17,18 @@ export default function LoginPage() {
     setError('')
 
     if (isSignUp) {
-      // New user — sign up then send to onboarding
       const { error } = await supabase.auth.signUp({ email, password })
       if (error) {
         setError(error.message)
       } else {
-        router.push('/onboarding')  // ← new users go to onboarding
+        router.push('/onboarding')
       }
     } else {
-      // Existing user — sign in then check profile completeness
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
         setError(error.message)
       } else {
-        router.push('/auth/check')  // ← returning users go through check
+        router.push('/auth/check')
       }
     }
 
@@ -38,15 +36,17 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#f0faf4] px-4">
       <div className="w-full max-w-sm">
+
+        {/* Logo */}
         <div className="text-center mb-8">
           <div className="text-5xl mb-3">🥗</div>
-          <h1 className="text-2xl font-semibold text-gray-900">HealthTrack</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">HealtHI</h1>
           <p className="text-sm text-gray-500 mt-1">AI-powered diet & fitness tracker</p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+        <div className="bg-white rounded-2xl border border-green-100 p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900 mb-1">
             {isSignUp ? 'Create account' : 'Sign in'}
           </h2>
@@ -62,7 +62,7 @@ export default function LoginPage() {
               placeholder="your@email.com"
               required
               autoFocus
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-sky-400"
+              className="w-full px-4 py-3 border border-green-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400"
             />
             <input
               type="password"
@@ -71,7 +71,7 @@ export default function LoginPage() {
               placeholder="Password"
               required
               minLength={6}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-sky-400"
+              className="w-full px-4 py-3 border border-green-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400"
             />
             {error && (
               <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
@@ -81,7 +81,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading || !email || !password}
-              className="w-full py-3 bg-sky-500 hover:bg-sky-600 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-colors"
+              className="w-full py-3 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-colors"
             >
               {loading ? 'Please wait...' : isSignUp ? 'Create account →' : 'Sign in →'}
             </button>
@@ -91,7 +91,7 @@ export default function LoginPage() {
             {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
             <button
               onClick={() => { setIsSignUp(!isSignUp); setError('') }}
-              className="text-sky-600 hover:underline"
+              className="text-green-600 hover:underline"
             >
               {isSignUp ? 'Sign in' : 'Sign up'}
             </button>
