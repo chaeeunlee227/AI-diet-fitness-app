@@ -13,11 +13,11 @@ export async function GET(request: NextRequest) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id')
+    .select('height_cm')
     .eq('id', user.id)
     .single()
 
-  if (!profile) {
+  if (!profile?.height_cm) {
     return NextResponse.redirect(`${origin}/onboard`)
   }
 
