@@ -4,8 +4,11 @@ import { AuthProvider } from '@/lib/auth-context'
 import { Nav } from './nav'
 
 export const metadata: Metadata = {
-  title: 'HealthTrack — AI Diet & Fitness',
+  title: 'HealtHI — AI Health Companion',
   description: 'Track meals, workouts, and get AI-powered health insights',
+  icons: {
+    icon: '/healthi-logo.svg',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
