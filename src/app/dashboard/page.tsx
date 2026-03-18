@@ -98,8 +98,9 @@ export default function DashboardPage() {
     })
     setWeeklyData(
       Array.from(dayMap.entries()).map(([date, calories]) => ({
-        date, calories,
-        label: format(new Date(date + 'T00:00:00'), 'EEE'),
+        date,
+        calories,
+        label: format(new Date(date + 'T00:00:00'), 'MM/dd'),
       }))
     )
 
@@ -260,15 +261,30 @@ export default function DashboardPage() {
         ) : (
           <ResponsiveContainer width="100%" height={160}>
             <BarChart data={weeklyData} barCategoryGap="30%">
-              <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#5a8a6a', fontWeight: 700 }} axisLine={false} tickLine={false} />
+              <XAxis
+                dataKey="label"
+                tick={{ fontSize: 11, fill: '#5a8a6a', fontWeight: 700 }}
+                axisLine={false}
+                tickLine={false}
+              />
               <YAxis hide domain={[0, 'auto']} />
               <Tooltip
                 formatter={(v: number) => [`${v} kcal`, 'Calories']}
-                contentStyle={{ fontSize: 12, borderRadius: 12, border: '1.5px solid #b6dfc8', fontFamily: 'Nunito' }}
+                labelFormatter={(label) => label}
+                contentStyle={{
+                  fontSize: 12,
+                  borderRadius: 12,
+                  border: '1.5px solid #86efac',
+                  fontFamily: 'Nunito',
+                  background: '#f0fdf4',       
+                  color: '#14532d',
+                }}
+                
+                cursor={{ fill: '#bbf7d0', opacity: 0.6, radius: 6 }}
               />
               <Bar dataKey="calories" radius={[6, 6, 0, 0]}>
                 {weeklyData.map((entry, index) => (
-                  <Cell key={index} fill={entry.date === today ? '#2e9e5b' : '#b6dfc8'} />
+                  <Cell key={index} fill={entry.date === today ? '#2e9e5b' : '#86efac'} />
                 ))}
               </Bar>
             </BarChart>
