@@ -255,7 +255,7 @@ export default function LogPage() {
           <button
             onClick={generateFeedback}
             disabled={generatingFeedback || foodLogs.length === 0}
-            className="text-xs bg-sky-500 hover:bg-sky-600 disabled:opacity-40 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+            className="text-xs bg-green-500 hover:bg-green-600 disabled:opacity-40 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
             title={
               foodLogs.length === 0
                 ? "Log some food first"
@@ -269,15 +269,15 @@ export default function LogPage() {
 
       {/* AI Daily Feedback */}
       {dailyFeedback && (
-        <div className="bg-sky-50 border border-sky-200 rounded-xl px-4 py-3 flex gap-3">
+        <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 flex gap-3">
           <span className="text-lg flex-shrink-0">✦</span>
           <div className="flex-1">
-            <p className="text-sm text-sky-800 leading-relaxed">
+            <p className="text-sm text-green-800 leading-relaxed">
               {dailyFeedback}
             </p>
             <button
               onClick={() => setDailyFeedback("")}
-              className="mt-2 text-xs text-sky-400 hover:text-sky-600"
+              className="mt-2 text-xs text-green-400 hover:text-green-600"
             >
               Dismiss
             </button>
