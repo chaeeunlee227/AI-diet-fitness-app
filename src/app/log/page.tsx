@@ -83,6 +83,7 @@ export default function LogPage() {
   const [dailyFeedback, setDailyFeedback] = useState("");
   const [generatingFeedback, setGeneratingFeedback] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [feedbackOpen, setFeedbackOpen] = useState(true);
 
   useEffect(() => {
     if (!authLoading && !user) router.push("/login");
@@ -227,6 +228,7 @@ export default function LogPage() {
       const { data } = await res.json();
       if (data?.feedback) {
         setDailyFeedback(data.feedback);
+        setFeedbackOpen(true);
         await supabase.from("daily_feedback").upsert(
           {
             user_id: user!.id,
@@ -290,19 +292,26 @@ export default function LogPage() {
 
       {/* AI Daily Feedback */}
       {dailyFeedback && (
-        <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 flex gap-3">
-          <span className="text-lg flex-shrink-0">✦</span>
-          <div className="flex-1">
-            <p className="text-sm text-green-800 leading-relaxed">
+        <div className="bg-green-50 border border-green-200 rounded-xl overflow-hidden">
+          <button
+            onClick={() => setFeedbackOpen((o) => !o)}
+            className="w-full flex items-center justify-between px-4 py-3 text-left"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-base">✦</span>
+              <span className="text-sm font-medium text-green-800">
+                AI Daily Feedback
+              </span>
+            </div>
+            <span className="text-green-500 text-xs">
+              {feedbackOpen ? "▲" : "▼"}
+            </span>
+          </button>
+          {feedbackOpen && (
+            <p className="text-sm text-green-800 leading-relaxed px-4 pb-4">
               {dailyFeedback}
             </p>
-            <button
-              onClick={() => setDailyFeedback("")}
-              className="mt-2 text-xs text-green-400 hover:text-green-600"
-            >
-              Dismiss
-            </button>
-          </div>
+          )}
         </div>
       )}
 
