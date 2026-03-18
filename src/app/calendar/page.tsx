@@ -128,7 +128,7 @@ export default function CalendarPage() {
                   {s?.logged && (
                     <div className="flex gap-0.5 mt-0.5">
                       <span className={`w-1 h-1 rounded-full ${isT ? 'bg-white' : 'bg-green-400'}`} />
-                      {s.workouts > 0 && <span className={`w-1 h-1 rounded-full ${isT ? 'bg-white' : 'bg-emerald-400'}`} />}
+                      {s.workouts > 0 && <span className={`w-1 h-1 rounded-full ${isT ? 'bg-white' : 'bg-yellow-400'}`} />}
                     </div>
                   )}
                 </button>
@@ -137,7 +137,7 @@ export default function CalendarPage() {
           </div>
           <div className="flex gap-4 mt-3 text-xs text-green-500 font-semibold">
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400" />Diet logged</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" />Workout</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-400" />Workout</span>
           </div>
         </div>
 
