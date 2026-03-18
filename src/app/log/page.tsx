@@ -23,6 +23,7 @@ type WorkoutLog = {
   calories_burned: number | null;
   notes: string | null;
 };
+type Profile = { daily_calorie_target: number; daily_protein_target: number };
 
 const MEAL_CONFIG: {
   key: MealType;
@@ -81,6 +82,7 @@ export default function LogPage() {
   });
   const [dailyFeedback, setDailyFeedback] = useState("");
   const [generatingFeedback, setGeneratingFeedback] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) router.push("/login");
@@ -90,22 +92,29 @@ export default function LogPage() {
   }, [date, user]);
 
   async function loadLogs() {
-    const [{ data: food }, { data: workouts }] = await Promise.all([
-      supabase
-        .from("food_logs")
-        .select("*")
-        .eq("user_id", user!.id)
-        .eq("log_date", date)
-        .order("created_at"),
-      supabase
-        .from("workout_logs")
-        .select("*")
-        .eq("user_id", user!.id)
-        .eq("log_date", date)
-        .order("created_at"),
-    ]);
+    const [{ data: food }, { data: workouts }, { data: profileData }] =
+      await Promise.all([
+        supabase
+          .from("food_logs")
+          .select("*")
+          .eq("user_id", user!.id)
+          .eq("log_date", date)
+          .order("created_at"),
+        supabase
+          .from("workout_logs")
+          .select("*")
+          .eq("user_id", user!.id)
+          .eq("log_date", date)
+          .order("created_at"),
+        supabase
+          .from("profiles")
+          .select("daily_calorie_target, daily_protein_target")
+          .eq("id", user!.id)
+          .single(),
+      ]);
     setFoodLogs(food || []);
     setWorkoutLogs(workouts || []);
+    if (profileData) setProfile(profileData);
   }
 
   async function analyzeFood() {
