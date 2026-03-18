@@ -1,7 +1,7 @@
 "use client";
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
@@ -58,16 +58,28 @@ const MEAL_CONFIG: {
   },
 ];
 
+function getLocalToday() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
 export default function LogPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-green-400 font-semibold">Loading...</div>}>
+      <LogPageInner />
+    </Suspense>
+  );
+}
+
+function LogPageInner() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  function getLocalToday() {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-  }
   const searchParams = useSearchParams();
+
+  // ── Read ?date= from URL, fall back to today ──
   const initialDate = searchParams.get("date") ?? getLocalToday();
   const [date, setDate] = useState(initialDate);
+
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
   const [addingMeal, setAddingMeal] = useState<MealType | null>(null);
@@ -87,11 +99,11 @@ export default function LogPage() {
   const [generatingFeedback, setGeneratingFeedback] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(true);
-  
 
   useEffect(() => {
     if (!authLoading && !user) router.push("/login");
   }, [user, authLoading]);
+
   useEffect(() => {
     if (user) loadLogs();
   }, [date, user]);
