@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
@@ -64,7 +65,9 @@ export default function LogPage() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   }
-  const [date, setDate] = useState(getLocalToday());
+  const searchParams = useSearchParams();
+  const initialDate = searchParams.get("date") ?? getLocalToday();
+  const [date, setDate] = useState(initialDate);
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
   const [addingMeal, setAddingMeal] = useState<MealType | null>(null);
@@ -84,6 +87,7 @@ export default function LogPage() {
   const [generatingFeedback, setGeneratingFeedback] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(true);
+  
 
   useEffect(() => {
     if (!authLoading && !user) router.push("/login");
