@@ -92,29 +92,40 @@ export default function LogPage() {
   }, [date, user]);
 
   async function loadLogs() {
-    const [{ data: food }, { data: workouts }, { data: profileData }] =
-      await Promise.all([
-        supabase
-          .from("food_logs")
-          .select("*")
-          .eq("user_id", user!.id)
-          .eq("log_date", date)
-          .order("created_at"),
-        supabase
-          .from("workout_logs")
-          .select("*")
-          .eq("user_id", user!.id)
-          .eq("log_date", date)
-          .order("created_at"),
-        supabase
-          .from("profiles")
-          .select("daily_calorie_target, daily_protein_target")
-          .eq("id", user!.id)
-          .single(),
-      ]);
+    const [
+      { data: food },
+      { data: workouts },
+      { data: profileData },
+      { data: feedbackData },
+    ] = await Promise.all([
+      supabase
+        .from("food_logs")
+        .select("*")
+        .eq("user_id", user!.id)
+        .eq("log_date", date)
+        .order("created_at"),
+      supabase
+        .from("workout_logs")
+        .select("*")
+        .eq("user_id", user!.id)
+        .eq("log_date", date)
+        .order("created_at"),
+      supabase
+        .from("profiles")
+        .select("daily_calorie_target, daily_protein_target")
+        .eq("id", user!.id)
+        .single(),
+      supabase
+        .from("daily_feedback")
+        .select("feedback")
+        .eq("user_id", user!.id)
+        .eq("log_date", date)
+        .maybeSingle(),
+    ]);
     setFoodLogs(food || []);
     setWorkoutLogs(workouts || []);
     if (profileData) setProfile(profileData);
+    setDailyFeedback(feedbackData?.feedback || "");
   }
 
   async function analyzeFood() {
@@ -214,7 +225,17 @@ export default function LogPage() {
         }),
       });
       const { data } = await res.json();
-      if (data?.feedback) setDailyFeedback(data.feedback);
+      if (data?.feedback) {
+        setDailyFeedback(data.feedback);
+        await supabase.from("daily_feedback").upsert(
+          {
+            user_id: user!.id,
+            log_date: date,
+            feedback: data.feedback,
+          },
+          { onConflict: "user_id,log_date" },
+        );
+      }
     } catch {
       setDailyFeedback("");
     }

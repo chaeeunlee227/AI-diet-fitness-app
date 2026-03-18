@@ -61,6 +61,21 @@ create table if not exists weight_logs (
   unique(user_id, log_date)
 );
 
+-- 5. Daily feedback from AI (one per day)
+create table if not exists daily_feedback (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  log_date date not null,
+  feedback text not null,
+  created_at timestamptz default now(),
+  unique(user_id, log_date)
+);
+create index if not exists daily_feedback_date_idx on daily_feedback(user_id, log_date);
+
+alter table daily_feedback enable row level security;
+create policy "daily_feedback: own rows" on daily_feedback
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
 -- =========================================
 -- Row Level Security — each user sees only their own data
 -- =========================================
@@ -98,3 +113,4 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
