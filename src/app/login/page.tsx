@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
-const DEMO_EMAIL = 'test@gmail.com'
+const DEMO_EMAIL = 'test@test'
 const DEMO_PASSWORD = 'testing'
 
 export default function LoginPage() {
