@@ -3,6 +3,9 @@ import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
+const DEMO_EMAIL = 'test@gmail.com'
+const DEMO_PASSWORD = 'testing'
+
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -53,6 +56,23 @@ export default function LoginPage() {
           <p className="text-sm font-medium text-gray-400 mb-6">
             {isSignUp ? 'Start your health journey today 🌱' : 'Sign in to continue 👋'}
           </p>
+
+          {!isSignUp && (
+            <div className="mb-5 bg-green-50 border border-green-200 rounded-2xl px-4 py-3">
+              <p className="text-xs font-bold text-green-700">Just looking around? Use the demo account</p>
+              <p className="text-xs font-medium text-gray-500 mt-1">
+                Email: <span className="font-semibold text-gray-700">{DEMO_EMAIL}</span><br />
+                Password: <span className="font-semibold text-gray-700">{DEMO_PASSWORD}</span>
+              </p>
+              <button
+                type="button"
+                onClick={() => { setEmail(DEMO_EMAIL); setPassword(DEMO_PASSWORD); setError('') }}
+                className="mt-2 text-xs font-bold text-green-600 hover:underline"
+              >
+                Fill in demo login →
+              </button>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-3">
             <input
